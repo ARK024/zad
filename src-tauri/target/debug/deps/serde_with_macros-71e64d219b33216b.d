@@ -1,0 +1,8 @@
+/teamspace/studios/this_studio/zad/src-tauri/target/debug/deps/serde_with_macros-71e64d219b33216b.d: /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/lib.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/apply.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/lazy_bool.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/utils.rs
+
+/teamspace/studios/this_studio/zad/src-tauri/target/debug/deps/libserde_with_macros-71e64d219b33216b.so: /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/lib.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/apply.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/lazy_bool.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/utils.rs
+
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/lib.rs:
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/apply.rs:
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/lazy_bool.rs:
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.19.0/src/utils.rs:

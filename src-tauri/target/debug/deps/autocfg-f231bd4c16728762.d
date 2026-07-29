@@ -1,0 +1,10 @@
+/teamspace/studios/this_studio/zad/src-tauri/target/debug/deps/autocfg-f231bd4c16728762.d: /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/teamspace/studios/this_studio/zad/src-tauri/target/debug/deps/libautocfg-f231bd4c16728762.rlib: /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/teamspace/studios/this_studio/zad/src-tauri/target/debug/deps/libautocfg-f231bd4c16728762.rmeta: /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs:
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs:
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs:
+/teamspace/studios/this_studio/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs:

@@ -273,9 +273,6 @@ pub fn run() {
     }));
 
     // Setup cleanup on application exit
-    let cleanup_handle = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let cleanup = cleanup_handle.clone();
-    
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             // Show settings on second launch (mirrors `app.on('second-instance')` in JS).

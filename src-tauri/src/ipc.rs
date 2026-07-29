@@ -229,14 +229,14 @@ pub fn q_store_set(
     if let Some(map) = data.as_object() {
         for (k, v) in map {
             // Security: validate key against whitelist
-            if !is_allowed_quran_key(&k) {
+            if !is_allowed_quran_key(k) {
                 log::warn!("Attempted to set disallowed quran config key: {}", k);
                 continue;
             }
             
             let old = snapshot.get(k);
             if old != Some(v) {
-                store.quran_set(&k, v.clone());
+                store.quran_set(k, v.clone());
                 changed.insert(k.clone(), json!({"newValue": v}));
                 log::debug!("Quran config changed: {} = {:?}", k, v);
                 

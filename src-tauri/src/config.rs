@@ -7,20 +7,15 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 /// Strongly-typed app mode enum
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum AppMode {
+    #[default]
     Sequential,
     Alternating,
     Both,
     QuranOnly,
     HadithOnly,
-}
-
-impl Default for AppMode {
-    fn default() -> Self {
-        Self::Sequential
-    }
 }
 
 impl AppMode {
@@ -46,17 +41,12 @@ impl AppMode {
 }
 
 /// Strongly-typed theme enum
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
+    #[default]
     Light,
     Dark,
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        Self::Light
-    }
 }
 
 impl Theme {
@@ -142,19 +132,10 @@ pub struct QuranConfig {
     pub recent_readings: Option<Vec<ReadingEntry>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ReadingEntry {
     pub date: String,
     pub page: Option<i64>,
-}
-
-impl Default for ReadingEntry {
-    fn default() -> Self {
-        Self {
-            date: String::new(),
-            page: None,
-        }
-    }
 }
 
 /// Helper to create default Value for backward compatibility
@@ -220,8 +201,6 @@ impl ConfigStore {
                 return;
             }
         };
-        
-        let mut merged = AppConfig::default();
         
         if let Ok(raw) = std::fs::read_to_string(&path) {
             // Try to parse as strongly-typed config first
@@ -451,11 +430,11 @@ impl ConfigStore {
             "cMatn" => cfg.c_matn = value.as_str().unwrap_or(&cfg.c_matn).to_string(),
             "cTakhrij" => cfg.c_takhrij = value.as_str().unwrap_or(&cfg.c_takhrij).to_string(),
             "cSharh" => cfg.c_sharh = value.as_str().unwrap_or(&cfg.c_sharh).to_string(),
-            "theme" => cfg.theme = value.as_str().map_or(cfg.theme.clone(), |s| Theme::from_str(s)),
+            "theme" => cfg.theme = value.as_str().map_or(cfg.theme.clone(), Theme::from_str),
             "index" => cfg.index = value.as_i64().unwrap_or(cfg.index),
             "firstRun" => cfg.first_run = value.as_bool().unwrap_or(cfg.first_run),
             "autoLaunch" => cfg.auto_launch = value.as_bool().unwrap_or(cfg.auto_launch),
-            "appMode" => cfg.app_mode = value.as_str().map_or(cfg.app_mode.clone(), |s| AppMode::from_str(s)),
+            "appMode" => cfg.app_mode = value.as_str().map_or(cfg.app_mode.clone(), AppMode::from_str),
             "widgetW" => cfg.widget_w = value.as_f64().unwrap_or(cfg.widget_w),
             "widgetH" => cfg.widget_h = value.as_f64().unwrap_or(cfg.widget_h),
             "widgetX" => cfg.widget_x = value.as_f64(),
@@ -486,11 +465,11 @@ impl ConfigStore {
                     "cMatn" => cfg.c_matn = v.as_str().unwrap_or(&cfg.c_matn).to_string(),
                     "cTakhrij" => cfg.c_takhrij = v.as_str().unwrap_or(&cfg.c_takhrij).to_string(),
                     "cSharh" => cfg.c_sharh = v.as_str().unwrap_or(&cfg.c_sharh).to_string(),
-                    "theme" => cfg.theme = v.as_str().map_or(cfg.theme.clone(), |s| Theme::from_str(s)),
+                    "theme" => cfg.theme = v.as_str().map_or(cfg.theme.clone(), Theme::from_str),
                     "index" => cfg.index = v.as_i64().unwrap_or(cfg.index),
                     "firstRun" => cfg.first_run = v.as_bool().unwrap_or(cfg.first_run),
                     "autoLaunch" => cfg.auto_launch = v.as_bool().unwrap_or(cfg.auto_launch),
-                    "appMode" => cfg.app_mode = v.as_str().map_or(cfg.app_mode.clone(), |s| AppMode::from_str(s)),
+                    "appMode" => cfg.app_mode = v.as_str().map_or(cfg.app_mode.clone(), AppMode::from_str),
                     "widgetW" => cfg.widget_w = v.as_f64().unwrap_or(cfg.widget_w),
                     "widgetH" => cfg.widget_h = v.as_f64().unwrap_or(cfg.widget_h),
                     "widgetX" => cfg.widget_x = v.as_f64(),
