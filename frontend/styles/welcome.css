@@ -10,7 +10,7 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
   direction: rtl;
   background: #f3f6f4;
   color: #1a2820;
