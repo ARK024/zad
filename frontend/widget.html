@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
+  <link rel="stylesheet" href="styles/widget.css">
+</head>
+
+<body>
+
+  <div class="shell" id="shell">
+    <div class="hdr">
+      <div class="hdr-l">
+        <span class="logo">📖 رياض الصالحين</span>
+        <span class="badge" id="badge">—</span>
+      </div>
+      <div class="hdr-r">
+        <button class="ibtn sz" id="fzD" title="تصغير الخط">أ−</button>
+        <button class="ibtn sz" id="fzU" title="تكبير الخط">أ+</button>
+        <button class="ibtn cls" id="btnClose" title="إغلاق  (Esc)">✕</button>
+      </div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-fill" id="prog" style="width:0%"></div>
+    </div>
+
+    <div class="meta" id="meta">
+      <span class="tag" id="chTag"></span>
+      <div class="narrator" id="narr"></div>
+    </div>
+
+    <div class="scroll" id="scrollCtn">
+      <div class="hadith" id="hdth" style="font-size:22px">جاري التحميل…</div>
+    </div>
+
+    <div class="ftr">
+      <div class="nav">
+        <button class="nbtn" id="btnPrev" disabled>◀ السابق</button>
+        <div class="counter">
+          <span id="counter">—</span>
+          <small id="pct">—</small>
+        </div>
+        <button class="nbtn" id="btnNext">التالي ▶</button>
+      </div>
+      <div class="acts">
+        <button class="btn btn-hide" id="btnHide">إخفاء</button>
+        <button class="btn btn-mem" id="btnForgot" style="display:none; background: linear-gradient(135deg, #c0392b, #e74c3c); box-shadow: 0 3px 10px rgba(192, 57, 43, .3);">نسيته ❌</button>
+        <button class="btn btn-mem" id="btnMem">حفظته ✅</button>
+      </div>
+    </div>
+
+    <span class="resize-hint">↔ قابل للتغيير حجماً</span>
+  </div>
+
+  <script src="tauri-shim.js"></script>
+  <script src="widget.js"></script>
+
+</body>
+
+</html>

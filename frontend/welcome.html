@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
+  <title>مرحباً</title>
+  <link rel="stylesheet" href="styles/welcome.css">
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="hero">
+      <span class="hero-icon">📖</span>
+      <h1>مرحباً بك في زاد المسلم</h1>
+      <p>رفيقك اليومي لحفظ القرآن الكريم وسنة الحبيب ﷺ<br>أثناء عملك على الكمبيوتر</p>
+    </div>
+
+    <div class="body">
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">١</div>
+          <div class="step-text">
+            <strong>التطبيق الدائم والمُتتابع</strong>
+            <span>سيعرض لك التطبيق في البداية القرآن حتى تتم وردك اليومي،<br>ثم يبدأ بعرض الأحاديث طوال اليوم
+              تلقائياً.</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">٢</div>
+          <div class="step-text">
+            <strong>يعمل في الخلفية بهدوء</strong>
+            <span>ستجده بجوار الساعة في شريط المهام (الأسفل)،<br>سيظهر القرآن والأحاديث في أوقات مجدولة دون
+              إزعاج.</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">٣</div>
+          <div class="step-text">
+            <strong>سجل كامل للإعدادات</strong>
+            <span>تخصيص كامل للألوان، حجم الخط، أوقات التذكير،<br>وأكثر من ذلك بكثير بمجرد الدخول إلى بطاقة
+              الإعدادات.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="toggle-card">
+        <div class="toggle-card-text">
+          <strong>🚀 تشغيل تلقائي مع Windows</strong>
+          <span>يبدأ التطبيق تلقائياً عند تشغيل الجهاز</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="chkAuto" checked>
+          <span class="knob"></span>
+        </label>
+      </div>
+
+      <button class="btn-start" id="btnStart">ابدأ الآن ←</button>
+
+    </div>
+  </div>
+
+  <script src="tauri-shim.js"></script>
+  <script src="welcome.js"></script>
+</body>
+
+</html>

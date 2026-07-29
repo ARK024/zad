@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
+  <title>الإعدادات - زاد المسلم</title>
+  <link rel="stylesheet" href="styles/settings.css">
+</head>
+
+<body>
+
+  <div class="hero">
+    <h2>📖 زاد المسلم</h2>
+    <p>رفيقك اليومي لحفظ القرآن وسنة الحبيب ﷺ</p>
+  </div>
+
+  <div class="tabs-wrapper">
+    <button class="tab-link active" data-tab="tab-general">عام</button>
+    <button class="tab-link" data-tab="tab-quran">القرآن</button>
+    <button class="tab-link" data-tab="tab-hadith">الأحاديث</button>
+  </div>
+
+  <div class="page" style="padding-bottom: 30px;">
+
+    <!-- TAB 1: GENERAL -->
+    <div id="tab-general" class="tab-content active">
+      <div class="card">
+        <div class="card-head">أولوية التشغيل والتتابعية</div>
+        <div class="card-body">
+          <div class="field">
+            <label>نظام عمل التطبيق الذكي</label>
+            <select id="selAppMode">
+              <option value="sequential">القرآن حتى اكتمال الهدف، ثم الأحاديث</option>
+              <option value="alternating">تبادلي (مرة قرآن، مرة حديث)</option>
+              <option value="both">إظهار التذكيرين معاً (بشكل مستقل)</option>
+              <option value="quranOnly">القرآن الكريم فقط</option>
+              <option value="hadithOnly">الأحاديث فقط (رياض الصالحين)</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="tog-row" style="margin-top: 12px;">
+              <span class="tog-lbl">🌙 الوضع الليلي <span class="tog-desc">تغيير خلفية بطاقات الأحاديث والقرآن لتطفو
+                  بألوان داكنة</span></span>
+              <label class="switch"><input type="checkbox" id="chkDark"><span class="knob"></span></label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="tog-row">
+              <span class="tog-lbl">🚀 تشغيل تلقائي مع Windows <span class="tog-desc">يبدأ التطبيق تلقائياً عند تشغيل
+                  الجهاز</span></span>
+              <label class="switch"><input type="checkbox" id="chkAuto"><span class="knob"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">⏸ الإيقاف المؤقت</div>
+        <div class="card-body">
+          <div id="pauseStatus" style="margin-bottom:8px;font-size:13px;color:#2e7d32"></div>
+          <div class="btn-row" style="flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            <button class="btn-sec sm pause-btn" data-mins="15">15 دقيقة</button>
+            <button class="btn-sec sm pause-btn" data-mins="30">30 دقيقة</button>
+            <button class="btn-sec sm pause-btn" data-mins="60">ساعة</button>
+            <button class="btn-sec sm pause-btn" data-mins="120">ساعتين</button>
+            <button class="btn-sec sm pause-btn" data-mins="-1">حتى نهاية اليوم</button>
+          </div>
+          <button class="btn-sec danger" id="btnResume" style="width:100%;display:none">▶ استئناف الآن</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">💾 النسخ الاحتياطي (عام)</div>
+        <div class="card-body">
+          <div class="btn-row" style="margin-bottom:8px">
+            <button class="btn-sec" id="btnBackup">📤 تصدير البيانات</button>
+            <button class="btn-sec" id="btnRestore">📥 استيراد البيانات</button>
+          </div>
+          <button class="btn-sec danger" id="btnResetGeo" style="width:100%;font-size:11.5px">
+            ↩ إعادة موضع نوافذ التذكير للافتراضي
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: QURAN -->
+    <div id="tab-quran" class="tab-content">
+      <div class="card">
+        <div class="card-head">إحصائيات التقدم (القرآن)</div>
+        <div class="card-body">
+          <div class="stats">
+            <div class="stat"><b id="qMem">—</b><small>حفظ (صفحة)</small></div>
+            <div class="stat"><b id="qTotal">—</b><small>قراءة (إجمالي)</small></div>
+            <div class="stat"><b id="qStreak">—</b><small>يوم متصل</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">إعدادات الحفظ والمراجعة</div>
+        <div class="card-body">
+          <div class="field">
+            <label>الهدف اليومي (الصفحات)</label>
+            <input type="number" id="quranDailyGoal" min="1" max="604" value="1">
+          </div>
+          <div class="field">
+            <label>المدة بين تذكير القرآن وآخر (دقائق)</label>
+            <input type="number" id="quranInterval" min="1" max="1440" value="10">
+          </div>
+          <div class="field">
+            <label>البدء من صفحة محددة</label>
+            <div class="jump-row">
+              <input type="number" id="quranStartPage" min="1" max="604" placeholder="رقم الصفحة (1-604)">
+              <button class="btn-sec sm" id="btnSetStartPage">تطبيق ▶</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="tog-row" style="margin-top: 10px;">
+              <span class="tog-lbl">تفعيل المراجعة البعيدة <span class="tog-desc">مراجعة الصفحات المحفوظة على فترات
+                  متباعدة</span></span>
+              <label class="switch"><input type="checkbox" id="quranReviewEnabled"><span class="knob"></span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label>دورة المراجعة البعيدة (كل X يوم)</label>
+            <input type="number" id="quranReviewDays" min="1" max="30" value="7">
+          </div>
+          <div class="field">
+            <label>عدد الصفحات في جلسة المراجعة</label>
+            <input type="number" id="quranReviewPagesPerSession" min="1" max="50" value="10">
+            <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">عدد الصفحات اللي هتظهر في كل جلسة مراجعة</small>
+          </div>
+          <div class="field">
+            <div class="tog-row">
+              <span class="tog-lbl">تفعيل المراجعة القريبة <span class="tog-desc">مراجعة الصفحات المحفوظة خلال الأسبوع
+                  الماضي</span></span>
+              <label class="switch"><input type="checkbox" id="quranRecentReviewEnabled"><span
+                  class="knob"></span></label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="tog-row">
+              <span class="tog-lbl">إخفاء الهيدر (عنوان السورة) <span class="tog-desc">ترك مساحة أوسع
+                  للنصوص</span></span>
+              <label class="switch"><input type="checkbox" id="quranHideHeader"><span class="knob"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">صفحات محفوظة مسبقاً (الحفظ السابق)</div>
+        <div class="card-body">
+          <div class="field">
+            <label>أضف نطاق صفحات محفوظة سابقاً</label>
+            <div class="jump-row">
+              <input type="number" id="preloadFrom" min="1" max="604" placeholder="من">
+              <input type="number" id="preloadTo" min="1" max="604" placeholder="إلى">
+              <button class="btn-sec sm" id="btnPreload">إضافة</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">مظهر القرآن</div>
+        <div class="card-body">
+          <div class="field">
+            <label>حجم الويدجت</label>
+            <select id="quranWidgetSize">
+              <option value="small">صغير</option>
+              <option value="medium">متوسط</option>
+              <option value="large">كبير</option>
+              <option value="xlarge">للقراءة المكثفة</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>حجم الخط</label>
+            <div class="sl-row">
+              <span style="font-size:11px;color:var(--muted)">أ</span>
+              <input type="range" id="quranFontSize" min="16" max="72" value="26" step="1">
+              <span style="font-size:18px;color:var(--muted)">أ</span>
+              <span class="sl-val" id="quranLblFont">26</span>
+            </div>
+          </div>
+          <button class="btn-sec danger" id="btnResetQuranGeo" style="width:100%;font-size:11.5px;margin-top:8px">
+            ↩ إعادة موضع نافذة القرآن للافتراضي
+          </button>
+        </div>
+      </div>
+      <div class="card" style="border-color:#fdecea">
+        <div class="card-head" style="color:#c0392b">⚠️ منطقة الخطر</div>
+        <div class="card-body">
+          <button class="btn-sec danger" id="btnResetQuranData" style="width:100%;font-size:12px">
+            🗑 مسح كافة إحصائيات وبيانات القرآن
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: HADITH -->
+    <div id="tab-hadith" class="tab-content">
+      <div class="card">
+        <div class="card-head">إحصائيات التقدم (الرياض)</div>
+        <div class="card-body">
+          <div class="stats">
+            <div class="stat"><b id="sMem">—</b><small>محفوظ</small></div>
+            <div class="stat"><b id="sLeft">—</b><small>متبقي</small></div>
+            <div class="stat"><b id="sTotal">—</b><small>المجموع</small></div>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" id="barFill" style="width:0%"></div>
+          </div>
+          <div class="bar-lbl" id="barLbl">0%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">إعدادات تذكير الأحاديث</div>
+        <div class="card-body">
+          <div class="field">
+            <label>المدة بين كل حديث وآخر</label>
+            <select id="selIv">
+              <option value="10">كل 10 دقائق</option>
+              <option value="15">كل 15 دقيقة</option>
+              <option value="30">كل 30 دقيقة</option>
+              <option value="60">كل ساعة</option>
+              <option value="90">كل ساعة ونصف</option>
+              <option value="120">كل ساعتين</option>
+              <option value="custom">وقت مخصص…</option>
+            </select>
+          </div>
+          <div class="field" id="customBox" style="display:none">
+            <label>الوقت المخصص (بالدقائق)</label>
+            <input type="number" id="inpCustom" min="1" max="1440" placeholder="مثال: 45">
+          </div>
+          <div class="field">
+            <div class="tog-row" style="margin-top: 10px;">
+              <span class="tog-lbl">تفعيل المراجعة المتباعدة <span class="tog-desc">إعادة عرض الأحاديث المحفوظة لمراجعتها</span></span>
+              <label class="switch"><input type="checkbox" id="hReviewEnabled"><span class="knob"></span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label>دورة المراجعة (كل X يوم)</label>
+            <input type="number" id="hReviewDays" min="1" max="30" value="7">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">🎨 المظهر المخصص (الرياض)</div>
+        <div class="card-body">
+          <div class="field">
+            <label>حجم الخط</label>
+            <div class="sl-row">
+              <span style="font-size:11px;color:var(--muted)">أ</span>
+              <input type="range" id="slFont" min="12" max="72" value="22" step="1">
+              <span style="font-size:18px;color:var(--muted)">أ</span>
+              <span class="sl-val" id="lblFont">17</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>نوع الخط</label>
+            <select id="selFontFam">
+              <option value="'QuranFont', 'Traditional Arabic'">Quran Font (المصحفي)</option>
+              <option value="'Segoe UI', Tahoma, Arial, sans-serif">Segoe UI (عصري)</option>
+              <option value="'Traditional Arabic'">Traditional Arabic (كلاسيكي)</option>
+              <option value="'Amiri', 'Times New Roman', serif">Amiri (أنيق)</option>
+              <option value="'Cairo', sans-serif">Cairo (حديث)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>ألوان النصوص</label>
+            <div style="display:flex; justify-content: space-between; gap: 5px; flex-wrap: wrap;">
+              <label style="font-size:11px; display:flex; flex-direction:column; align-items:center; color:var(--muted); font-weight:bold;">السند
+                <input type="color" id="cSanad" style="width:40px;height:30px;padding:0;border:none;border-radius:4px;cursor:pointer">
+              </label>
+              <label style="font-size:11px; display:flex; flex-direction:column; align-items:center; color:var(--muted); font-weight:bold;">المتن
+                <input type="color" id="cMatn" style="width:40px;height:30px;padding:0;border:none;border-radius:4px;cursor:pointer">
+              </label>
+              <label style="font-size:11px; display:flex; flex-direction:column; align-items:center; color:var(--muted); font-weight:bold;">التخريج
+                <input type="color" id="cTakhrij" style="width:40px;height:30px;padding:0;border:none;border-radius:4px;cursor:pointer">
+              </label>
+              <label style="font-size:11px; display:flex; flex-direction:column; align-items:center; color:var(--muted); font-weight:bold;">الشرح
+                <input type="color" id="cSharh" style="width:40px;height:30px;padding:0;border:none;border-radius:4px;cursor:pointer">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">🔍 التنقل والبحث (الرياض)</div>
+        <div class="card-body">
+          <div class="search-box field">
+            <span class="s-ico">🔍</span>
+            <input type="text" id="inpSearch" placeholder="ابحث في المتن أو الراوي…">
+          </div>
+          <div class="results field" id="results"></div>
+
+          <div class="jump-row field">
+            <input type="number" id="inpJump" min="1" placeholder="رقم الحديث الشريف للانتقال">
+            <button class="btn-sec sm" id="btnJump">انتقال ▶</button>
+          </div>
+
+          <div class="btn-row" style="margin-top: 15px;">
+            <button class="btn-sec" id="btnShowNow">👁️ عرض الآن</button>
+            <button class="btn-sec danger" id="btnReset">🔄 إعادة البداية</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Save -->
+    <button class="btn-main" id="btnSave">💾 حفظ كافة الإعدادات</button>
+
+  </div>
+
+  <div id="status"></div>
+
+  <script src="tauri-shim.js"></script>
+  <script src="settings.js"></script>
+</body>
+
+</html>

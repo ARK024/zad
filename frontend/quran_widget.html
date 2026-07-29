@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: file: https:;">
+    <title>التذكير بالقرآن</title>
+    <link rel="stylesheet" href="styles/quran_widget.css">
+    <style>
+        /* The widget div has its own gradient bg; the body is a fallback so the
+           window is at least visible on platforms where transparent windows
+           render incorrectly (Tauri 2 + mingw on Windows). */
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f3f6f4;
+            color: #2e7d32;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        #__loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Widget fills the frameless Electron window */
+        #quran-memorization-widget {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-height: 100% !important;
+            z-index: 10 !important;
+        }
+
+        /* Header areas are draggable — keeps footer buttons clickable */
+        .quran-widget-header,
+        .quran-widget-header-collapsed {
+            -webkit-app-region: drag;
+        }
+
+        /* Interactive elements must not drag */
+        .quran-widget-test-btn,
+        button {
+            -webkit-app-region: no-drag;
+        }
+
+        /* We hide the JS resize handles, as we will use Electron's native frameless resize 
+       if we set resizable: true on the BrowserWindow. 
+       Actually, if window is fixed size, we just hide them. */
+        .rh-se,
+        .rh-sw,
+        .rh-ne,
+        .rh-nw {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="__loading">جاري التحميل...</div>
+    <script>
+      // Surface any uncaught error so we can diagnose blank-window issues.
+      window.__quranErrors = [];
+      window.addEventListener('error', function (ev) {
+        window.__quranErrors.push(ev.message);
+        var l = document.getElementById('__loading');
+        if (l) { l.textContent = 'خطأ: ' + ev.message; l.style.color = '#b00'; }
+      });
+      window.addEventListener('unhandledrejection', function (ev) {
+        window.__quranErrors.push(String(ev.reason));
+        var l = document.getElementById('__loading');
+        if (l) { l.textContent = 'فشل: ' + ev.reason; l.style.color = '#b00'; }
+      });
+    </script>
+    <!-- Mocking the Chrome extension API via Tauri IPC -->
+    <script src="tauri-shim.js"></script>
+    <script>
+        // IMPORTANT: do NOT replace window.chrome entirely on Windows — WebView2
+        // exposes `window.chrome.webview.postMessage` here, which Tauri's IPC
+        // depends on. We extend the existing object instead.
+        window.chrome = window.chrome || {};
+        window.chrome.storage = {
+            local: {
+                get: async (keys) => await window.api.invoke('q:store:get', keys),
+                set: async (data) => await window.api.invoke('q:store:set', data),
+                remove: async (keys) => await window.api.invoke('q:store:remove', keys),
+                clear: async () => await window.api.invoke('q:store:clear')
+            },
+            onChanged: {
+                addListener: (cb) => {
+                    window.api.receive('q:store:changed', (changes) => {
+                        cb(changes, 'local');
+                    });
+                }
+            }
+        };
+        window.chrome.runtime = {
+            getURL: (path) => path,
+            id: "electron-quran-ext",
+            onMessage: { addListener: () => { } },
+            sendMessage: (msg, callback) => {
+                const p = window.api.invoke('q:bg:message', msg);
+                if (callback) p.then(callback);
+                return p;
+            }
+        };
+    </script>
+    <script>
+        // Observe DOM to map widget lifecycle to OS window visibility, and
+        // remove the placeholder loading screen as soon as the real widget is
+        // injected so it does not steal pointer events.
+        window.addEventListener('DOMContentLoaded', () => {
+            let lastWidgetWasVisible = null;
+            const observer = new MutationObserver(() => {
+                const widget = document.getElementById('quran-memorization-widget');
+                const visible = !!(widget && !widget.classList.contains('hiding'));
+
+                // Drop the placeholder once the real widget exists.
+                const loader = document.getElementById('__loading');
+                if (widget && loader) loader.remove();
+
+                if (visible !== lastWidgetWasVisible) {
+                    lastWidgetWasVisible = visible;
+                    window.api.invoke(visible ? 'q:window:show' : 'q:window:hide');
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        });
+    </script>
+    <script src="quran_storage.js"></script>
+    <script src="quran_content.js"></script>
+</body>
+
+</html>
