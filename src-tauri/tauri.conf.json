@@ -15,6 +15,7 @@
   },
   "bundle": {
     "active": true,
+    "resources": ["../data/*"],
     "targets": "all",
     "category": "Utility",
     "shortDescription": "زاد المسلم - رفيقك اليومي",
