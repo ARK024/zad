@@ -26,7 +26,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2"
+        shell: bash
+        run: cargo install tauri-cli --version "^2" || true
 
       - name: Build App
         run: cargo tauri build --bundles nsis
