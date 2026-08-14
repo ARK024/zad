@@ -51,27 +51,10 @@ impl DataLoader {
 
     /// Loads `Riyadh_AlSaliheen_V2.json` from the data directory. Returns true if at least
     /// one hadith was loaded.
-    pub fn load_hadith_data(&self, data_dir: &Path) -> bool {
-        let path = data_dir.join("Riyadh_AlSaliheen_V2.json");
+    pub fn load_hadith_data(&self, _data_dir: &Path) -> bool {
+        let raw = include_str!("../../data/Riyadh_AlSaliheen_V2.json");
         
-        // Check if file exists
-        if !path.exists() {
-            log::error!("Hadith data file not found: {:?}", path);
-            return false;
-        }
-        
-        let raw = match std::fs::read_to_string(&path) {
-            Ok(s) => {
-                log::debug!("Loaded hadith data from {:?}", path);
-                s
-            }
-            Err(e) => {
-                log::error!("Failed to read hadith data file {:?}: {}", path, e);
-                return false;
-            }
-        };
-        
-        let parsed: Value = match serde_json::from_str(&raw) {
+        let parsed: Value = match serde_json::from_str(raw) {
             Ok(v) => {
                 log::debug!("Successfully parsed hadith JSON ({} bytes)", raw.len());
                 v
@@ -138,26 +121,10 @@ impl DataLoader {
         has_data
     }
 
-    pub fn load_quran_data(&self, data_dir: &Path) {
-        let path = data_dir.join("quran.json");
+    pub fn load_quran_data(&self, _data_dir: &Path) {
+        let raw = include_str!("../../data/quran.json");
         
-        if !path.exists() {
-            log::warn!("Quran data file not found: {:?}", path);
-            return;
-        }
-        
-        let raw = match std::fs::read_to_string(&path) {
-            Ok(s) => {
-                log::debug!("Loaded quran data from {:?} ({} bytes)", path, s.len());
-                s
-            }
-            Err(e) => {
-                log::error!("Failed to read quran data file {:?}: {}", path, e);
-                return;
-            }
-        };
-        
-        if let Ok(parsed) = serde_json::from_str::<Value>(&raw) {
+        if let Ok(parsed) = serde_json::from_str::<Value>(raw) {
             if let Some(arr) = parsed.as_array().cloned() {
                 log::info!("Loaded {} ayahs from quran.json", arr.len());
                 self.inner.write().quran = arr;
