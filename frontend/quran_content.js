@@ -382,10 +382,12 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
 
 
 async function initQuranWidget() {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('show') !== 'true') {
+  
+  if (localStorage.getItem('showQuranWidget') !== 'true') {
     return; // Do nothing on startup
   }
+  localStorage.removeItem('showQuranWidget');
+
   try {
 
     await injectCustomFont();
