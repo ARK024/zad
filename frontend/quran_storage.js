@@ -17,7 +17,7 @@ const StorageManager = {
   _dayStartHour: 0, // يتحدّث عند التهيئة
 
   async loadDayStartHour() {
-    const data = await chrome.storage.local.get({ dayStartHour: 0 });
+    const data = await window.api.invoke('q:store:get', { dayStartHour: 0 });
     this._dayStartHour = parseInt(data.dayStartHour) || 0;
   },
 
@@ -34,7 +34,7 @@ const StorageManager = {
   },
 
   async initData() {
-    const data = await chrome.storage.local.get([
+    const data = await window.api.invoke('q:store:get', [
       'memorizedPages', 'recentReadings', 'totalReadCount',
       'completedPages',
       'dailyStreak', 'lastCompletedDate', 'dailyGoal'
@@ -50,13 +50,13 @@ const StorageManager = {
         .filter(p => p.date >= cutoff && p.date <= today)
         .map(p => ({ page: p.page, date: p.date }));
 
-      await chrome.storage.local.set({ memorizedPages: uniquePages, recentReadings, totalReadCount });
-      await chrome.storage.local.remove('completedPages');
+      await window.api.invoke('q:store:set', { memorizedPages: uniquePages, recentReadings, totalReadCount });
+      await window.api.invoke('q:store:remove', 'completedPages');
       return;
     }
 
     if (!data.memorizedPages) {
-      await chrome.storage.local.set({
+      await window.api.invoke('q:store:set', {
         memorizedPages: [],
         recentReadings: [],
         totalReadCount: 0,
@@ -71,7 +71,7 @@ const StorageManager = {
 
   async saveCompletedPage(pageNumber) {
     const today = this.getTodayDate();
-    const data = await chrome.storage.local.get(['memorizedPages', 'recentReadings', 'totalReadCount']);
+    const data = await window.api.invoke('q:store:get', ['memorizedPages', 'recentReadings', 'totalReadCount']);
 
     // 1. أضف للصفحات المحفوظة لو جديدة
     const memorizedSet = new Set(data.memorizedPages || []);
@@ -88,12 +88,12 @@ const StorageManager = {
     // 3. زوّد العداد الإجمالي
     const totalReadCount = (data.totalReadCount || 0) + 1;
 
-    await chrome.storage.local.set({ memorizedPages, recentReadings, totalReadCount });
+    await window.api.invoke('q:store:set', { memorizedPages, recentReadings, totalReadCount });
     await this.updateStreak();
   },
 
   async updateStreak() {
-    const data = await chrome.storage.local.get(['dailyStreak', 'lastCompletedDate']);
+    const data = await window.api.invoke('q:store:get', ['dailyStreak', 'lastCompletedDate']);
     const today = this.getTodayDate();
     const yesterday = this.getYesterday();
     let streak = data.dailyStreak || 0;
@@ -102,12 +102,12 @@ const StorageManager = {
     if (last !== today && last !== yesterday) streak = 0;
     if (last !== today) {
       streak += 1;
-      await chrome.storage.local.set({ dailyStreak: streak, lastCompletedDate: today });
+      await window.api.invoke('q:store:set', { dailyStreak: streak, lastCompletedDate: today });
     }
   },
 
   async getDailyProgress() {
-    const data = await chrome.storage.local.get(['dailyGoal', 'recentReadings']);
+    const data = await window.api.invoke('q:store:get', ['dailyGoal', 'recentReadings']);
     const today = this.getTodayDate();
     const dailyGoal = data.dailyGoal || 1;
     const completedToday = (data.recentReadings || []).filter(r => r.date === today).length;
@@ -116,7 +116,7 @@ const StorageManager = {
   },
 
   async getPageStats(pageNumber) {
-    const data = await chrome.storage.local.get(['recentReadings', 'memorizedPages', 'preloadedPages']);
+    const data = await window.api.invoke('q:store:get', ['recentReadings', 'memorizedPages', 'preloadedPages']);
     const today = this.getTodayDate();
     const todayCount = (data.recentReadings || []).filter(r => r.date === today && r.page === pageNumber).length;
     const isMemorized = (data.memorizedPages || []).includes(pageNumber)
@@ -125,7 +125,7 @@ const StorageManager = {
   },
 
   async getTotalStats() {
-    const data = await chrome.storage.local.get(['dailyStreak', 'totalReadCount']);
+    const data = await window.api.invoke('q:store:get', ['dailyStreak', 'totalReadCount']);
     const allMemorized = await this.getAllMemorizedPages();
     return {
       uniquePages: allMemorized.length,
@@ -135,7 +135,7 @@ const StorageManager = {
   },
 
   async exportData() {
-    const data = await chrome.storage.local.get(null);
+    const data = await window.api.invoke('q:store:get', null);
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -167,7 +167,7 @@ const StorageManager = {
       for (const key of allowedKeys) {
         if (key in data) sanitized[key] = data[key];
       }
-      await chrome.storage.local.set(sanitized);
+      await window.api.invoke('q:store:set', sanitized);
       await this.initData(); // migration تلقائية لو ملف قديم
       return { success: true };
     } catch (e) {
@@ -176,14 +176,14 @@ const StorageManager = {
   },
 
   async resetData() {
-    const settings = await chrome.storage.local.get([
+    const settings = await window.api.invoke('q:store:get', [
       'currentQuranPage', 'memorizationInterval', 'dailyGoal',
       'widgetSize', 'hideHeader', 'reviewEnabled', 'reviewDays',
       'recentReviewEnabled', 'fontSizePx', 'reviewPagesPerSession',
       'recentPagesPerSession', 'dayStartHour', 'testModeEnabled'
     ]);
-    await chrome.storage.local.clear();
-    await chrome.storage.local.set({
+    await window.api.invoke('q:store:clear');
+    await window.api.invoke('q:store:set', {
       ...settings,
       memorizedPages: [],
       recentReadings: [],
@@ -209,31 +209,31 @@ const StorageManager = {
     });
   },
 
-  async saveWidgetPosition(x, y) { await chrome.storage.local.set({ widgetX: x, widgetY: y }); },
+  async saveWidgetPosition(x, y) { await window.api.invoke('q:store:set', { widgetX: x, widgetY: y }); },
   async getWidgetPosition() {
-    const data = await chrome.storage.local.get(['widgetX', 'widgetY']);
+    const data = await window.api.invoke('q:store:get', ['widgetX', 'widgetY']);
     return { x: data.widgetX, y: data.widgetY };
   },
-  async saveWidgetSize(width, height) { await chrome.storage.local.set({ widgetCustomWidth: width, widgetCustomHeight: height }); },
+  async saveWidgetSize(width, height) { await window.api.invoke('q:store:set', { widgetCustomWidth: width, widgetCustomHeight: height }); },
   async getWidgetSize() {
-    const data = await chrome.storage.local.get(['widgetCustomWidth', 'widgetCustomHeight']);
+    const data = await window.api.invoke('q:store:get', ['widgetCustomWidth', 'widgetCustomHeight']);
     return { width: data.widgetCustomWidth || null, height: data.widgetCustomHeight || null };
   },
 
   // إعدادات عدد الصفحات في جلسة المراجعة
   async setReviewPagesPerSession(count) {
     const safeCount = Math.max(1, Math.min(50, parseInt(count) || 10));  // بين 1 و 50
-    await chrome.storage.local.set({ reviewPagesPerSession: safeCount });
+    await window.api.invoke('q:store:set', { reviewPagesPerSession: safeCount });
     return safeCount;
   },
 
   async getReviewPagesPerSession() {
-    const data = await chrome.storage.local.get(['reviewPagesPerSession']);
+    const data = await window.api.invoke('q:store:get', ['reviewPagesPerSession']);
     return parseInt(data.reviewPagesPerSession) || 10;  // افتراضي: 10
   },
 
   async getDayIndexInCycle(reviewDays) {
-    const stored = await chrome.storage.local.get(['reviewCycleStartDate']);
+    const stored = await window.api.invoke('q:store:get', ['reviewCycleStartDate']);
     const today = this.getTodayDate();
     if (stored.reviewCycleStartDate) {
       const [sy, sm, sd] = stored.reviewCycleStartDate.split('-').map(Number);
@@ -241,12 +241,12 @@ const StorageManager = {
       const diffDays = Math.floor((Date.UTC(ty, tm - 1, td) - Date.UTC(sy, sm - 1, sd)) / 86400000);
       return diffDays % reviewDays;
     }
-    await chrome.storage.local.set({ reviewCycleStartDate: today });
+    await window.api.invoke('q:store:set', { reviewCycleStartDate: today });
     return 0;
   },
 
   async getReviewSettings() {
-    const data = await chrome.storage.local.get(['reviewEnabled', 'reviewDays', 'reviewIndex', 'lastReviewDate', 'reviewPagesPerSession']);
+    const data = await window.api.invoke('q:store:get', ['reviewEnabled', 'reviewDays', 'reviewIndex', 'lastReviewDate', 'reviewPagesPerSession']);
     return {
       enabled: data.reviewEnabled || false,
       days: data.reviewDays || 7,
@@ -274,7 +274,7 @@ const StorageManager = {
     const days = settings.days;
     const today = this.getTodayDate();
     let currentIndex = settings.reviewIndex;
-    const sessionData = await chrome.storage.local.get({
+    const sessionData = await window.api.invoke('q:store:get', {
       reviewPagesPerSession: 0,
       reviewSessionStart: 0,
       reviewRetryPages: []
@@ -285,7 +285,7 @@ const StorageManager = {
     if (settings.lastReviewDate !== today) {
       currentIndex = 0; sessionStart = 0;
       effectiveRetryPages = [];
-      await chrome.storage.local.set({
+      await window.api.invoke('q:store:set', {
         reviewIndex: 0, lastReviewDate: today,
         reviewSessionStart: 0, reviewRetryPages: []
       });
@@ -336,31 +336,31 @@ const StorageManager = {
   },
 
   async incrementReviewIndex() {
-    const data = await chrome.storage.local.get(['reviewIndex']);
+    const data = await window.api.invoke('q:store:get', ['reviewIndex']);
     const newIndex = (data.reviewIndex || 0) + 1;
-    await chrome.storage.local.set({ reviewIndex: newIndex });
+    await window.api.invoke('q:store:set', { reviewIndex: newIndex });
     return newIndex;
   },
 
   // التنقل بين الجلسات
   async nextSession() {
-    const data = await chrome.storage.local.get(['reviewIndex', 'reviewPagesPerSession']);
+    const data = await window.api.invoke('q:store:get', ['reviewIndex', 'reviewPagesPerSession']);
     const pagesPerSession = parseInt(data.reviewPagesPerSession) || 10;
     const newIndex = (data.reviewIndex || 0) + pagesPerSession;
-    await chrome.storage.local.set({ reviewIndex: newIndex });
+    await window.api.invoke('q:store:set', { reviewIndex: newIndex });
     return newIndex;
   },
 
   async prevSession() {
-    const data = await chrome.storage.local.get(['reviewIndex', 'reviewPagesPerSession']);
+    const data = await window.api.invoke('q:store:get', ['reviewIndex', 'reviewPagesPerSession']);
     const pagesPerSession = parseInt(data.reviewPagesPerSession) || 10;
     const newIndex = Math.max(0, (data.reviewIndex || 0) - pagesPerSession);
-    await chrome.storage.local.set({ reviewIndex: newIndex });
+    await window.api.invoke('q:store:set', { reviewIndex: newIndex });
     return newIndex;
   },
 
   async advanceReviewSession(newSessionStart) {
-    await chrome.storage.local.set({ reviewSessionStart: newSessionStart });
+    await window.api.invoke('q:store:set', { reviewSessionStart: newSessionStart });
   },
 
   // "إعادة" — يعيد نفس الصفحة فوراً بدون تقدم للتالية
@@ -369,12 +369,12 @@ const StorageManager = {
     const pageToRetry = reviewData.pages[reviewData.currentIndex];
     
     // نحفظ إن الصفحة دي ضعيفة ومحتاج إعادة
-    const data = await chrome.storage.local.get({ weakPages: [] });
+    const data = await window.api.invoke('q:store:get', { weakPages: [] });
     const weakPages = data.weakPages || [];
     
     if (pageToRetry !== undefined && !weakPages.includes(pageToRetry)) {
       weakPages.push(pageToRetry);
-      await chrome.storage.local.set({ weakPages: weakPages });
+      await window.api.invoke('q:store:set', { weakPages: weakPages });
     }
     
     // ❌ مش بنتقدم في الـindex! الصفحة هتتعرض تاني
@@ -389,12 +389,12 @@ const StorageManager = {
     const pageToRetry = reviewData.pages[reviewData.currentIndex];
     
     // نحفظ إن الصفحة دي ضعيفة
-    const data = await chrome.storage.local.get({ weakPages: [] });
+    const data = await window.api.invoke('q:store:get', { weakPages: [] });
     const weakPages = data.weakPages || [];
     
     if (pageToRetry !== undefined && !weakPages.includes(pageToRetry)) {
       weakPages.push(pageToRetry);
-      await chrome.storage.local.set({ weakPages: weakPages });
+      await window.api.invoke('q:store:set', { weakPages: weakPages });
     }
     
     // ❌ مش بنتقدم في الـindex!
@@ -402,7 +402,7 @@ const StorageManager = {
   },
 
   async getRecentPages() {
-    const data = await chrome.storage.local.get(['recentReadings']);
+    const data = await window.api.invoke('q:store:get', ['recentReadings']);
     const today = this.getTodayDate();
     const cutoff = this._daysAgoStr(7);
     const recentSet = new Set();
@@ -418,7 +418,7 @@ const StorageManager = {
     if (recentPages.length === 0) return { pages: [], currentIndex: 0, totalToday: 0, enabled: false };
 
     const today = this.getTodayDate();
-    const data = await chrome.storage.local.get({
+    const data = await window.api.invoke('q:store:get', {
       recentReviewIndex: 0,
       lastRecentReviewDate: null,
       recentPagesPerSession: 0,
@@ -430,7 +430,7 @@ const StorageManager = {
     if (data.lastRecentReviewDate !== today) {
       currentIndex = 0;
       effectiveRetryPages = []; // ← لا نستخدم القيمة القديمة من قبل الـ reset
-      await chrome.storage.local.set({
+      await window.api.invoke('q:store:set', {
         recentReviewIndex: 0,
         lastRecentReviewDate: today,
         recentRetryPages: []
@@ -451,27 +451,27 @@ const StorageManager = {
   },
 
   async incrementRecentReviewIndex(count = 1) {
-    const data = await chrome.storage.local.get(['recentReviewIndex']);
+    const data = await window.api.invoke('q:store:get', ['recentReviewIndex']);
     const newIndex = (data.recentReviewIndex || 0) + count;
-    await chrome.storage.local.set({ recentReviewIndex: newIndex });
+    await window.api.invoke('q:store:set', { recentReviewIndex: newIndex });
     return newIndex;
   },
 
   // "تخطي" — يتقدم للتالية بدون إعادة
   async skipRecentReviewPage() {
-    const data = await chrome.storage.local.get(['recentReviewIndex']);
+    const data = await window.api.invoke('q:store:get', ['recentReviewIndex']);
     const newIndex = (data.recentReviewIndex || 0) + 1;
-    await chrome.storage.local.set({ recentReviewIndex: newIndex });
+    await window.api.invoke('q:store:set', { recentReviewIndex: newIndex });
     return newIndex;
   },
 
   async getMemorizedPages() {
-    const data = await chrome.storage.local.get(['memorizedPages']);
+    const data = await window.api.invoke('q:store:get', ['memorizedPages']);
     return (data.memorizedPages || []).sort((a, b) => a - b);
   },
 
   async getPreloadedPages() {
-    const data = await chrome.storage.local.get(['preloadedPages']);
+    const data = await window.api.invoke('q:store:get', ['preloadedPages']);
     return data.preloadedPages || [];
   },
 
@@ -480,7 +480,7 @@ const StorageManager = {
     const s = new Set(existing);
     for (let p = from; p <= to; p++) s.add(p);
     const sorted = [...s].sort((a, b) => a - b);
-    await chrome.storage.local.set({ preloadedPages: sorted });
+    await window.api.invoke('q:store:set', { preloadedPages: sorted });
     return sorted.length;
   },
 
@@ -488,19 +488,19 @@ const StorageManager = {
     const existing = await this.getPreloadedPages();
     const merged = new Set([...existing, ...pagesArray.filter(p => p >= 1 && p <= 604)]);
     const sorted = [...merged].sort((a, b) => a - b);
-    await chrome.storage.local.set({ preloadedPages: sorted });
+    await window.api.invoke('q:store:set', { preloadedPages: sorted });
     return sorted.length;
   },
 
   async removePreloadedPages(pagesArray) {
     const existing = await this.getPreloadedPages();
     const removeSet = new Set(pagesArray);
-    await chrome.storage.local.set({ preloadedPages: existing.filter(p => !removeSet.has(p)) });
+    await window.api.invoke('q:store:set', { preloadedPages: existing.filter(p => !removeSet.has(p)) });
   },
 
   async removePreloadedRange(from, to) {
     const existing = await this.getPreloadedPages();
-    await chrome.storage.local.set({ preloadedPages: existing.filter(p => p < from || p > to) });
+    await window.api.invoke('q:store:set', { preloadedPages: existing.filter(p => p < from || p > to) });
   },
 
   async getAllMemorizedPages() {

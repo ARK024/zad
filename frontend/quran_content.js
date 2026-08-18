@@ -8,7 +8,7 @@ function toArabicNumerals(num) {
 let pausedMediaElements = [];
 let _dismissingWidget = false;
 // eslint-disable-next-line no-unused-vars
-const _extensionValid = true;
+
 const WIDGET_WIDTHS = { small: '280px', medium: '380px', large: '480px', xlarge: '580px' };
 
 function cleanupWidget(widget) {
@@ -43,14 +43,7 @@ function wrapWordsForTestMode(bodyEl) {
   }
 }
 
-function isExtensionValid() {
-  try {
-    // chrome.runtime.id يطلع null أو exception لو الـ context انتهى
-    return !!chrome.runtime?.id;
-  } catch (e) {
-    return false;
-  }
-}
+
 
 function pauseAllMedia() {
   pausedMediaElements = [];
@@ -96,7 +89,7 @@ async function injectCustomFont() {
   let foundFontFormat = null;
 
   for (const fontName of possibleFonts) {
-    const url = chrome.runtime.getURL(fontName);
+    const url = fontName;
     try {
       const response = await fetch(url, { method: 'HEAD' });
       if (response.ok) {
@@ -157,11 +150,11 @@ function applyStoredSize(widget, sizeData) {
 
 // البيانات تُجلَب من background.js عبر messaging
 async function getPageAyahsFromBG(pageNumber) {
-  return chrome.runtime.sendMessage({ type: 'getPageAyahs', page: pageNumber });
+  return window.api.invoke('q:bg:message', { type: 'getPageAyahs', page: pageNumber });
 }
 
 async function getMultiplePagesFromBG(pageNumbers) {
-  return chrome.runtime.sendMessage({ type: 'getMultiplePages', pages: pageNumbers });
+  return window.api.invoke('q:bg:message', { type: 'getMultiplePages', pages: pageNumbers });
 }
 
 async function showRecentReviewPage(recentData, widgetSize, hideHeader, _attempts = 0) {
@@ -210,7 +203,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const [position, sizeData, fontData] = await Promise.all([
     loadWidgetPosition(),
     getStoredWidgetSize(),
-    chrome.storage.local.get({ fontSizePx: 26, testModeEnabled: false })
+    window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false })
   ]);
   const testModeOn = fontData.testModeEnabled || false;
 
@@ -310,7 +303,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
     widget.classList.toggle('quran-widget-test-active');
     const isActive = widget.classList.contains('quran-widget-test-active');
     e.currentTarget.classList.toggle('active', isActive);
-    await chrome.storage.local.set({ testModeEnabled: isActive });
+    await window.api.invoke('q:store:set', { testModeEnabled: isActive });
   });
 
   if (hideHeader) {
@@ -330,9 +323,9 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
     try {
       await StorageManager.retryRecentReviewPage();
       _dismissingWidget = true;
-      await chrome.storage.local.set({ lastCompletedTime: Date.now() });
+      await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
     } catch (e) {
-      console.warn('Quran Extension: recent-skip error', e);
+      console.warn('Quran Widget: recent-skip error', e);
       _dismissingWidget = true;
     }
     resumePausedMedia();
@@ -344,15 +337,15 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
     let newIndex = recentData.currentIndex;
     let allDone = false;
     try {
-      const _rrd = await chrome.storage.local.get({ totalReadCount: 0 });
-      await chrome.storage.local.set({ totalReadCount: _rrd.totalReadCount + sessionCount });
+      const _rrd = await window.api.invoke('q:store:get', { totalReadCount: 0 });
+      await window.api.invoke('q:store:set', { totalReadCount: _rrd.totalReadCount + sessionCount });
 
       for (let i = 0; i < sessionCount; i++) {
         newIndex = await StorageManager.incrementRecentReviewIndex();
       }
       allDone = newIndex >= recentData.pages.length;
     } catch (e) {
-      console.warn('Quran Extension: recent-done error', e);
+      console.warn('Quran Widget: recent-done error', e);
     }
 
     const successMsg = document.getElementById('quran-success-msg');
@@ -367,9 +360,9 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
       try {
         resumePausedMedia();
         _dismissingWidget = true;
-        await chrome.storage.local.set({ lastCompletedTime: Date.now() });
+        await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
       } catch (e) {
-        console.warn('Quran Extension: recent-done finalize error', e);
+        console.warn('Quran Widget: recent-done finalize error', e);
         _dismissingWidget = true;
       }
       widget.classList.add('hiding');
@@ -391,7 +384,7 @@ async function initQuranWidget() {
 
     let data;
     try {
-      data = await chrome.storage.local.get({
+      data = await window.api.invoke('q:store:get', {
         currentQuranPage: 1,
         memorizationInterval: 10,
         lastCompletedTime: 0,
@@ -449,8 +442,8 @@ async function initQuranWidget() {
 
 async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0) {
   if (_attempts >= reviewData.pages.length) {
-    console.warn('Quran Extension: تعذّر تحميل أي صفحة مراجعة، الانتقال للحفظ');
-    const data = await chrome.storage.local.get(['currentQuranPage', 'widgetSize', 'hideHeader']);
+    console.warn('Quran Widget: تعذّر تحميل أي صفحة مراجعة، الانتقال للحفظ');
+    const data = await window.api.invoke('q:store:get', ['currentQuranPage', 'widgetSize', 'hideHeader']);
     await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', data.hideHeader || false);
     return;
   }
@@ -470,7 +463,7 @@ async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0)
     if (nd.currentIndex < nd.pages.length) {
       await showReviewPage(nd, widgetSize, hideHeader, _attempts + 1);
     } else {
-      const data = await chrome.storage.local.get(['currentQuranPage', 'widgetSize', 'hideHeader']);
+      const data = await window.api.invoke('q:store:get', ['currentQuranPage', 'widgetSize', 'hideHeader']);
       await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', data.hideHeader || false);
     }
     return;
@@ -493,7 +486,7 @@ async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0)
 async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
   if (currentPage > 604) {
     currentPage = 1;
-    await chrome.storage.local.set({ currentQuranPage: 1 });
+    await window.api.invoke('q:store:set', { currentQuranPage: 1 });
   }
 
   // نتخطى الصفحات المحفوظة مسبقاً (preloaded)
@@ -508,7 +501,7 @@ async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
     }
     if (loopCount < 604) {
       currentPage = searchPage;
-      await chrome.storage.local.set({ currentQuranPage: currentPage });
+      await window.api.invoke('q:store:set', { currentQuranPage: currentPage });
     }
   }
 
@@ -544,7 +537,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const [position, sizeData, _reviewFontData] = await Promise.all([
     loadWidgetPosition(),
     getStoredWidgetSize(),
-    chrome.storage.local.get({ fontSizePx: 26, testModeEnabled: false })
+    window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false })
   ]);
   const testModeOn = _reviewFontData.testModeEnabled || false;
 
@@ -647,7 +640,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
     widget.classList.toggle('quran-widget-test-active');
     const isActive = widget.classList.contains('quran-widget-test-active');
     e.currentTarget.classList.toggle('active', isActive);
-    await chrome.storage.local.set({ testModeEnabled: isActive });
+    await window.api.invoke('q:store:set', { testModeEnabled: isActive });
   });
 
   if (hideHeader) {
@@ -667,9 +660,9 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
     try {
       await StorageManager.retryReviewPage();
       _dismissingWidget = true;
-      await chrome.storage.local.set({ lastCompletedTime: Date.now() });
+      await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
     } catch (e) {
-      console.warn('Quran Extension: distant-skip error', e);
+      console.warn('Quran Widget: distant-skip error', e);
       _dismissingWidget = true;
     }
     resumePausedMedia();
@@ -685,8 +678,8 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
     let allDone = false;
     try {
       // زوّد totalReadCount بعدد الصفحات في الجلسة
-      const _drd = await chrome.storage.local.get({ totalReadCount: 0 });
-      await chrome.storage.local.set({ totalReadCount: _drd.totalReadCount + sessionCount });
+      const _drd = await window.api.invoke('q:store:get', { totalReadCount: 0 });
+      await window.api.invoke('q:store:set', { totalReadCount: _drd.totalReadCount + sessionCount });
 
       // نزوّد الـ index بعدد الصفحات اللي اتراجعت في هذه الجلسة
       for (let i = 0; i < sessionCount; i++) {
@@ -697,7 +690,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       const newReviewData = await StorageManager.getTodayReviewPages();
       allDone = newIndex >= newReviewData.pages.length;
     } catch (e) {
-      console.warn('Quran Extension: distant-done error', e);
+      console.warn('Quran Widget: distant-done error', e);
     }
 
     const successMsg = document.getElementById('quran-success-msg');
@@ -712,9 +705,9 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       try {
         resumePausedMedia();
         _dismissingWidget = true;
-        await chrome.storage.local.set({ lastCompletedTime: Date.now() });
+        await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
       } catch (e) {
-        console.warn('Quran Extension: distant-done finalize error', e);
+        console.warn('Quran Widget: distant-done finalize error', e);
         _dismissingWidget = true;
       }
       widget.classList.add('hiding');
@@ -736,7 +729,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   const [position, sizeData, fontData] = await Promise.all([
     loadWidgetPosition(),
     getStoredWidgetSize(),
-    chrome.storage.local.get({ fontSizePx: 26 })
+    window.api.invoke('q:store:get', { fontSizePx: 26 })
   ]);
 
   const widget = document.createElement('div');
@@ -842,12 +835,12 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   document.getElementById('quran-btn-hide')?.addEventListener('click', async () => {
     try {
       // إخفاء مؤقت — يُسجَّل كقراءة بدون حفظ
-      const _hideData = await chrome.storage.local.get({ totalReadCount: 0 });
-      await chrome.storage.local.set({ totalReadCount: _hideData.totalReadCount + 1 });
+      const _hideData = await window.api.invoke('q:store:get', { totalReadCount: 0 });
+      await window.api.invoke('q:store:set', { totalReadCount: _hideData.totalReadCount + 1 });
       _dismissingWidget = true;
-      await chrome.storage.local.set({ lastCompletedTime: Date.now() });
+      await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
     } catch (e) {
-      console.warn('Quran Extension: hide-btn storage error', e);
+      console.warn('Quran Widget: hide-btn storage error', e);
       _dismissingWidget = true;
     }
     resumePausedMedia();
@@ -870,12 +863,12 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
 
       // نرفع الـ flag قبل الحفظ حتى لا يُطفئ storage.onChanged رسالة "ما شاء الله"
       _dismissingWidget = true;
-      await chrome.storage.local.set({
+      await window.api.invoke('q:store:set', {
         currentQuranPage: nextPage,
         lastCompletedTime: Date.now()
       });
     } catch (e) {
-      console.warn('Quran Extension: done-btn storage error', e);
+      console.warn('Quran Widget: done-btn storage error', e);
       _dismissingWidget = true;
     }
 
@@ -896,9 +889,9 @@ if (document.readyState === 'loading') {
   initQuranWidget();
 }
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
+window.api.receive('q:store:changed', (changes) => { const areaName = 'local';
   try {
-    if (!isExtensionValid()) return;
+    
     if (areaName === 'local' && changes.lastCompletedTime) {
       if (_dismissingWidget) {
         scheduleNextWidget();
@@ -915,7 +908,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       scheduleNextWidget();
     }
   } catch (e) {
-    console.warn('Quran Extension: storage.onChanged error', e);
+    console.warn('Quran Widget: storage.onChanged error', e);
   }
 });
 
@@ -927,12 +920,12 @@ const WIDGET_LOCK_TTL = 4000;
 
 async function tryAcquireWidgetLock() {
   const now = Date.now();
-  const data = await chrome.storage.local.get({ widgetShownAt: 0 });
+  const data = await window.api.invoke('q:store:get', { widgetShownAt: 0 });
   if (now - data.widgetShownAt < WIDGET_LOCK_TTL) return false;
   // نستخدم token فريد عشان نتفادى race condition بين التابات
   const token = `${now}-${Math.random().toString(36).slice(2, 8)}`;
-  await chrome.storage.local.set({ widgetShownAt: now, widgetLockToken: token });
-  const check = await chrome.storage.local.get({ widgetLockToken: '' });
+  await window.api.invoke('q:store:set', { widgetShownAt: now, widgetLockToken: token });
+  const check = await window.api.invoke('q:store:get', { widgetLockToken: '' });
   return check.widgetLockToken === token;
 }
 
@@ -949,7 +942,7 @@ async function scheduleNextWidget() {
   }
 
   try {
-    const data = await chrome.storage.local.get({ memorizationInterval: 10, lastCompletedTime: 0, pausedUntil: 0 });
+    const data = await window.api.invoke('q:store:get', { memorizationInterval: 10, lastCompletedTime: 0, pausedUntil: 0 });
     const intervalMs = data.memorizationInterval * 60 * 1000;
 
     // لو الإضافة موقوفة، نجدول بعد انتهاء وقت الإيقاف
@@ -978,8 +971,8 @@ async function scheduleNextWidget() {
       _scheduleTimeoutId = setTimeout(scheduleNextWidget, intervalMs);
     }
   } catch (e) {
-    console.warn('Quran Extension: scheduleNextWidget error', e);
-    if (!isExtensionValid()) return; // توقف لو الـ context انتهى
+    console.warn('Quran Widget: scheduleNextWidget error', e);
+    
     _scheduleTimeoutId = setTimeout(scheduleNextWidget, 60000);
   }
 }
@@ -988,8 +981,8 @@ scheduleNextWidget();
 // safety net كل 5 دقائق
 setInterval(async () => {
   try {
-    if (!isExtensionValid()) return;
-    const data = await chrome.storage.local.get({ memorizationInterval: 10, lastCompletedTime: 0, pausedUntil: 0 });
+    
+    const data = await window.api.invoke('q:store:get', { memorizationInterval: 10, lastCompletedTime: 0, pausedUntil: 0 });
     if (data.pausedUntil && Date.now() < data.pausedUntil) return;
     const intervalMs = data.memorizationInterval * 60 * 1000;
     const hasWidget = document.getElementById('quran-memorization-widget');
@@ -1005,6 +998,6 @@ setInterval(async () => {
       }
     }
   } catch (e) {
-    console.warn('Quran Extension: safety-net error', e);
+    console.warn('Quran Widget: safety-net error', e);
   }
 }, 300000);
