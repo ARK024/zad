@@ -1,4 +1,13 @@
 
+
+function abortAndHide() {
+  const loader = document.getElementById('__loading');
+  if (loader) loader.remove();
+  if (window.api && window.api.invoke) {
+    window.api.invoke('q:window:hide').catch(() => {});
+  }
+}
+
 function toArabicNumerals(num) {
   if (num === undefined || num === null || isNaN(num)) return '';
   const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -378,9 +387,7 @@ async function initQuranWidget() {
 
     try {
       await StorageManager.initData();
-    } catch (e) {
-      return;
-    }
+    } catch (e) { return abortAndHide(); }
 
     let data;
     try {
@@ -394,27 +401,16 @@ async function initQuranWidget() {
         recentReviewEnabled: false,
         pausedUntil: 0
       });
-    } catch (e) {
-      return;
-    }
+    } catch (e) { return abortAndHide(); }
 
-    // تحقق من الإيقاف المؤقت
-    if (data.pausedUntil && Date.now() < data.pausedUntil) {
-      return;
-    }
+    
 
     const intervalMinutes = data.memorizationInterval;
     const lastCompletedTime = data.lastCompletedTime;
     const widgetSize = data.widgetSize || 'medium';
     const hideHeader = data.hideHeader || false;
 
-    const currentTime = Date.now();
-    const intervalMs = intervalMinutes * 60 * 1000;
-    const timeSinceLastCompleted = currentTime - lastCompletedTime;
-
-    if (timeSinceLastCompleted < intervalMs) {
-      return;
-    }
+    
 
     if (data.reviewEnabled) {
       const reviewData = await StorageManager.getTodayReviewPages();
@@ -436,8 +432,7 @@ async function initQuranWidget() {
 
     await showNewMemorizationPage(data.currentQuranPage, widgetSize, hideHeader);
 
-  } catch (error) {
-  }
+  } catch (error) { abortAndHide(); }
 }
 
 async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0) {
@@ -894,7 +889,7 @@ window.api.receive('q:store:changed', (changes) => { const areaName = 'local';
     
     if (areaName === 'local' && changes.lastCompletedTime) {
       if (_dismissingWidget) {
-        scheduleNextWidget();
+        
         return;
       }
 
@@ -905,7 +900,7 @@ window.api.receive('q:store:changed', (changes) => { const areaName = 'local';
         setTimeout(() => cleanupWidget(widget), 300);
       }
 
-      scheduleNextWidget();
+      
     }
   } catch (e) {
     console.warn('Quran Widget: storage.onChanged error', e);
@@ -913,88 +908,6 @@ window.api.receive('q:store:changed', (changes) => { const areaName = 'local';
 });
 
 // ─── setTimeout ذكي بدل setInterval ───
-let _scheduleTimeoutId = null;
-let _isInitializing = false;
-
-const WIDGET_LOCK_TTL = 4000;
-
-async function tryAcquireWidgetLock() {
-  const now = Date.now();
-  const data = await window.api.invoke('q:store:get', { widgetShownAt: 0 });
-  if (now - data.widgetShownAt < WIDGET_LOCK_TTL) return false;
-  // نستخدم token فريد عشان نتفادى race condition بين التابات
-  const token = `${now}-${Math.random().toString(36).slice(2, 8)}`;
-  await window.api.invoke('q:store:set', { widgetShownAt: now, widgetLockToken: token });
-  const check = await window.api.invoke('q:store:get', { widgetLockToken: '' });
-  return check.widgetLockToken === token;
-}
-
-async function scheduleNextWidget() {
-  // لو الـ extension context انتهى (بعد تحديث أو إعادة تحميل) نوقف كل شيء
 
 
-  if (_scheduleTimeoutId !== null) {
-    clearTimeout(_scheduleTimeoutId);
-    _scheduleTimeoutId = null;
-  }
 
-  try {
-    const data = await window.api.invoke('q:store:get', { memorizationInterval: 10, lastCompletedTime: 0, pausedUntil: 0 });
-    const intervalMs = data.memorizationInterval * 60 * 1000;
-
-    // لو الإضافة موقوفة، نجدول بعد انتهاء وقت الإيقاف
-    if (data.pausedUntil && Date.now() < data.pausedUntil) {
-      _scheduleTimeoutId = setTimeout(scheduleNextWidget, data.pausedUntil - Date.now() + 1000);
-      return;
-    }
-
-    const elapsed = Date.now() - data.lastCompletedTime;
-    const remaining = intervalMs - elapsed;
-
-    if (remaining > 0) {
-      _scheduleTimeoutId = setTimeout(scheduleNextWidget, remaining);
-    } else {
-      if (!_dismissingWidget && !_isInitializing && !document.getElementById('quran-memorization-widget')) {
-        const locked = await tryAcquireWidgetLock();
-        if (locked) {
-          _isInitializing = true;
-          try {
-            await initQuranWidget();
-          } finally {
-            _isInitializing = false;
-          }
-        }
-      }
-      _scheduleTimeoutId = setTimeout(scheduleNextWidget, intervalMs);
-    }
-  } catch (e) {
-    console.warn('Quran Widget: scheduleNextWidget error', e);
-    
-    _scheduleTimeoutId = setTimeout(scheduleNextWidget, 60000);
-  }
-}
-scheduleNextWidget();
-
-// safety net كل 5 دقائق
-setInterval(async () => {
-  try {
-    
-    const data = await window.api.invoke('q:store:get', { memorizationInterval: 10, lastCompletedTime: 0, pausedUntil: 0 });
-    if (data.pausedUntil && Date.now() < data.pausedUntil) return;
-    const intervalMs = data.memorizationInterval * 60 * 1000;
-    const hasWidget = document.getElementById('quran-memorization-widget');
-    if (Date.now() - data.lastCompletedTime >= intervalMs && !hasWidget && !_isInitializing) {
-      const locked = await tryAcquireWidgetLock();
-      if (locked) {
-        _isInitializing = true;
-        try {
-          await initQuranWidget();
-        } finally {
-          _isInitializing = false;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Quran Widget: safety-net error', e);
-  }
-}, 300000);
