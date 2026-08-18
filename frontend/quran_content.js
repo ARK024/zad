@@ -931,10 +931,7 @@ async function tryAcquireWidgetLock() {
 
 async function scheduleNextWidget() {
   // لو الـ extension context انتهى (بعد تحديث أو إعادة تحميل) نوقف كل شيء
-  if (!isExtensionValid()) {
-    if (_scheduleTimeoutId !== null) clearTimeout(_scheduleTimeoutId);
-    return;
-  }
+
 
   if (_scheduleTimeoutId !== null) {
     clearTimeout(_scheduleTimeoutId);
