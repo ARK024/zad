@@ -97,10 +97,10 @@
         window.chrome = window.chrome || {};
         window.chrome.storage = {
             local: {
-                get: async (keys) => await window.api.invoke('q:store:get', keys),
-                set: async (data) => await window.api.invoke('q:store:set', data),
-                remove: async (keys) => await window.api.invoke('q:store:remove', keys),
-                clear: async () => await window.api.invoke('q:store:clear')
+                get: (keys, cb) => { const p = window.api.invoke('q:store:get', keys); if(cb) p.then(cb); return p; },
+                set: (data, cb) => { const p = window.api.invoke('q:store:set', data); if(cb) p.then(cb); return p; },
+                remove: (keys, cb) => { const p = window.api.invoke('q:store:remove', keys); if(cb) p.then(cb); return p; },
+                clear: (cb) => { const p = window.api.invoke('q:store:clear'); if(cb) p.then(cb); return p; }
             },
             onChanged: {
                 addListener: (cb) => {

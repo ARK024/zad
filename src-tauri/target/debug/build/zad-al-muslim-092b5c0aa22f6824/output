@@ -11,3 +11,5 @@ cargo:PERMISSION_FILES_PATH=/teamspace/studios/this_studio/zad/src-tauri/target/
 cargo:rerun-if-changed=capabilities
 cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS
 cargo:rustc-env=TAURI_ENV_TARGET_TRIPLE=x86_64-unknown-linux-gnu
+cargo:rerun-if-changed=../data/Riyadh_AlSaliheen_V2.json
+cargo:rerun-if-changed=../data/quran.json
