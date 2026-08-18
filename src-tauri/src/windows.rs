@@ -316,6 +316,14 @@ pub fn show_quran_window(app: &AppHandle) {
     }
 }
 
+pub fn reveal_quran_window(app: &AppHandle) {
+    log::debug!("Revealing Quran window");
+    if let Some(w) = app.get_webview_window(QURAN_LABEL) {
+        let _ = w.show();
+        log::debug!("Quran window shown");
+    }
+}
+
 pub fn hide_quran_window(app: &AppHandle) {
     log::debug!("Hiding Quran window");
     if let Some(w) = app.get_webview_window(QURAN_LABEL) {

@@ -182,7 +182,7 @@ pub fn widget_ready(
 
 #[tauri::command]
 pub fn q_window_show(app: AppHandle) {
-    windows::show_quran_window(&app);
+    windows::reveal_quran_window(&app);
 }
 
 #[tauri::command]
