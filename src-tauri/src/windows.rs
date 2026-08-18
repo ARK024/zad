@@ -309,9 +309,8 @@ pub fn create_quran_window(app: &AppHandle, store: &ConfigStore) {
 pub fn show_quran_window(app: &AppHandle) {
     log::debug!("Showing Quran window");
     if let Some(w) = app.get_webview_window(QURAN_LABEL) {
-        let _ = w.eval("window.location.reload();");
-        let _ = w.show();
-        log::debug!("Quran window shown");
+        let _ = w.eval("window.location.href = 'quran_widget.html?show=true';");
+        log::debug!("Quran window reload triggered");
     } else {
         log::warn!("Quran window not found, cannot show");
     }

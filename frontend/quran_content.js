@@ -380,8 +380,14 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   });
 }
 
+
 async function initQuranWidget() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('show') !== 'true') {
+    return; // Do nothing on startup
+  }
   try {
+
     await injectCustomFont();
     await StorageManager.loadDayStartHour();
 
