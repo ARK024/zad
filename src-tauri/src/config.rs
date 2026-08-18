@@ -118,6 +118,7 @@ impl Default for AppConfig {
 
 /// Strongly-typed Quran config struct
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct QuranConfig {
     pub current_quran_page: Option<i64>,
     pub daily_goal: Option<i64>,
@@ -130,6 +131,15 @@ pub struct QuranConfig {
     pub widget_custom_width: Option<f64>,
     pub widget_custom_height: Option<f64>,
     pub recent_readings: Option<Vec<ReadingEntry>>,
+    pub widget_size: Option<String>,
+    pub font_size_px: Option<i64>,
+    pub review_enabled: Option<bool>,
+    pub recent_review_enabled: Option<bool>,
+    pub review_days: Option<i64>,
+    pub review_pages_per_session: Option<i64>,
+    pub hide_header: Option<bool>,
+    pub memorized_pages: Option<Vec<i64>>,
+    pub preloaded_pages: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -558,6 +568,23 @@ impl ConfigStore {
                     );
                 }
             }
+            "widgetSize" => q.widget_size = value.as_str().map(|s| s.to_string()),
+            "fontSizePx" => q.font_size_px = value.as_i64(),
+            "reviewEnabled" => q.review_enabled = value.as_bool(),
+            "recentReviewEnabled" => q.recent_review_enabled = value.as_bool(),
+            "reviewDays" => q.review_days = value.as_i64(),
+            "reviewPagesPerSession" => q.review_pages_per_session = value.as_i64(),
+            "hideHeader" => q.hide_header = value.as_bool(),
+            "memorizedPages" => {
+                if let Some(arr) = value.as_array() {
+                    q.memorized_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                }
+            }
+            "preloadedPages" => {
+                if let Some(arr) = value.as_array() {
+                    q.preloaded_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                }
+            }
             _ => log::warn!("Unknown quran config key: {}", key),
         }
     }
@@ -586,6 +613,23 @@ impl ConfigStore {
                             );
                         }
                     }
+                    "widgetSize" => q.widget_size = v.as_str().map(|s| s.to_string()),
+                    "fontSizePx" => q.font_size_px = v.as_i64(),
+                    "reviewEnabled" => q.review_enabled = v.as_bool(),
+                    "recentReviewEnabled" => q.recent_review_enabled = v.as_bool(),
+                    "reviewDays" => q.review_days = v.as_i64(),
+                    "reviewPagesPerSession" => q.review_pages_per_session = v.as_i64(),
+                    "hideHeader" => q.hide_header = v.as_bool(),
+                    "memorizedPages" => {
+                        if let Some(arr) = v.as_array() {
+                            q.memorized_pages = Some(arr.iter().filter_map(|x| x.as_i64()).collect());
+                        }
+                    }
+                    "preloadedPages" => {
+                        if let Some(arr) = v.as_array() {
+                            q.preloaded_pages = Some(arr.iter().filter_map(|x| x.as_i64()).collect());
+                        }
+                    }
                     _ => log::warn!("Unknown quran config key in update: {}", k),
                 }
             }
@@ -606,6 +650,15 @@ impl ConfigStore {
             "widgetCustomWidth" => { q.widget_custom_width = None; true }
             "widgetCustomHeight" => { q.widget_custom_height = None; true }
             "recentReadings" => { q.recent_readings = None; true }
+            "widgetSize" => { q.widget_size = None; true }
+            "fontSizePx" => { q.font_size_px = None; true }
+            "reviewEnabled" => { q.review_enabled = None; true }
+            "recentReviewEnabled" => { q.recent_review_enabled = None; true }
+            "reviewDays" => { q.review_days = None; true }
+            "reviewPagesPerSession" => { q.review_pages_per_session = None; true }
+            "hideHeader" => { q.hide_header = None; true }
+            "memorizedPages" => { q.memorized_pages = None; true }
+            "preloadedPages" => { q.preloaded_pages = None; true }
             _ => {
                 log::warn!("Unknown quran config key to remove: {}", key);
                 false
@@ -627,6 +680,15 @@ impl ConfigStore {
             "widgetCustomWidth".to_string(),
             "widgetCustomHeight".to_string(),
             "recentReadings".to_string(),
+            "widgetSize".to_string(),
+            "fontSizePx".to_string(),
+            "reviewEnabled".to_string(),
+            "recentReviewEnabled".to_string(),
+            "reviewDays".to_string(),
+            "reviewPagesPerSession".to_string(),
+            "hideHeader".to_string(),
+            "memorizedPages".to_string(),
+            "preloadedPages".to_string(),
         ];
         *q = QuranConfig::default();
         keys

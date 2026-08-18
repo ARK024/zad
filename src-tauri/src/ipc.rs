@@ -21,6 +21,15 @@ const ALLOWED_QURAN_KEYS: &[&str] = &[
     "widgetCustomWidth",
     "widgetCustomHeight",
     "recentReadings",
+    "widgetSize",
+    "fontSizePx",
+    "reviewEnabled",
+    "recentReviewEnabled",
+    "reviewDays",
+    "reviewPagesPerSession",
+    "hideHeader",
+    "memorizedPages",
+    "preloadedPages",
 ];
 
 fn is_allowed_quran_key(key: &str) -> bool {
