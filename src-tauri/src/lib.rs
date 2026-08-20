@@ -139,6 +139,7 @@ fn init_file_logger() {
         path: std::path::PathBuf,
         max_size: u64,
         max_files: u32,
+        lock: std::sync::Mutex<()>,
     }
     
     impl FileLogger {
@@ -188,6 +189,7 @@ fn init_file_logger() {
             true
         }
         fn log(&self, record: &log::Record) {
+            let _guard = self.lock.lock().unwrap_or_else(|e| e.into_inner());
             // Check if rotation is needed
             if self.should_rotate() {
                 self.rotate();
@@ -215,6 +217,7 @@ fn init_file_logger() {
         path: log_path,
         max_size: 1_048_576, // 1MB
         max_files: 5,
+        lock: std::sync::Mutex::new(()),
     };
     
     let _ = log::set_boxed_logger(Box::new(logger))
@@ -261,8 +264,9 @@ fn locate_data_dir(app: &AppHandle) -> PathBuf {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let _ = env_logger::try_init();
+    // Init file logger first; fall back to env_logger if it fails.
     init_file_logger();
+    let _ = env_logger::try_init();
     log::info!("=== زاد المسلم v1.1.0 starting ===");
     log::info!("exe: {:?}", std::env::current_exe());
     log::info!("cwd: {:?}", std::env::current_dir());
@@ -459,6 +463,4 @@ fn advance(app: &AppHandle, delta: i64) {
     ctx.restart_orchestrator(app);
 }
 
-pub fn run_app() {
-    run()
-}
+

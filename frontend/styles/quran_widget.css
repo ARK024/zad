@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+
 @font-face {
   font-family: 'QuranFont';
   src: url('../quran-font.ttf') format('truetype');
@@ -7,8 +9,6 @@
     U+0621-064A, U+064B-0652, U+0653-065F, U+0660-066F, U+0670-06FF,
     U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
 
 :root {
   /* Unified Jade Theme Variables */

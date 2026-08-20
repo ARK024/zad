@@ -140,6 +140,24 @@ pub struct QuranConfig {
     pub hide_header: Option<bool>,
     pub memorized_pages: Option<Vec<i64>>,
     pub preloaded_pages: Option<Vec<i64>>,
+    // Additional runtime keys used by quran_storage.js
+    pub daily_streak: Option<i64>,
+    pub last_completed_date: Option<String>,
+    pub last_completed_time: Option<i64>,
+    pub total_read_count: Option<i64>,
+    #[serde(default)]
+    pub completed_pages: Option<Value>,
+    pub recent_pages_per_session: Option<i64>,
+    pub day_start_hour: Option<i64>,
+    pub last_review_date: Option<String>,
+    pub review_cycle_start_date: Option<String>,
+    pub review_session_start: Option<i64>,
+    pub review_retry_pages: Option<Vec<i64>>,
+    pub last_recent_review_date: Option<String>,
+    pub recent_retry_pages: Option<Vec<i64>>,
+    pub test_mode_enabled: Option<bool>,
+    pub widget_shown_at: Option<i64>,
+    pub weak_pages: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -302,7 +320,7 @@ impl ConfigStore {
         }
     }
 
-    /// Save the hadith config to disk (best effort).
+    /// Save the hadith config to disk atomically (write to temp file, then rename).
     pub fn save_cfg(&self, app: &AppHandle) {
         let path = match store_path(app) {
             Ok(p) => p,
@@ -315,10 +333,17 @@ impl ConfigStore {
         let snapshot = self.cfg.lock().clone();
         match serde_json::to_string_pretty(&snapshot) {
             Ok(s) => {
-                if let Err(e) = std::fs::write(&path, s) {
-                    log::error!("Failed to save config to {}: {}", path.display(), e);
+                let tmp_path = path.with_extension("json.tmp");
+                if let Err(e) = std::fs::write(&tmp_path, &s) {
+                    log::error!("Failed to write temp config to {}: {}", tmp_path.display(), e);
+                    return;
+                }
+                if let Err(e) = std::fs::rename(&tmp_path, &path) {
+                    log::error!("Failed to rename temp config {} -> {}: {}", tmp_path.display(), path.display(), e);
+                    // Fallback: try direct write
+                    let _ = std::fs::write(&path, &s);
                 } else {
-                    log::debug!("Config saved successfully to {}", path.display());
+                    log::debug!("Config saved atomically to {}", path.display());
                 }
             }
             Err(e) => {
@@ -410,10 +435,16 @@ impl ConfigStore {
         let snapshot = self.quran.lock().clone();
         match serde_json::to_string_pretty(&snapshot) {
             Ok(s) => {
-                if let Err(e) = std::fs::write(&path, s) {
-                    log::error!("Failed to save quran config to {}: {}", path.display(), e);
+                let tmp_path = path.with_extension("json.tmp");
+                if let Err(e) = std::fs::write(&tmp_path, &s) {
+                    log::error!("Failed to write temp quran config to {}: {}", tmp_path.display(), e);
+                    return;
+                }
+                if let Err(e) = std::fs::rename(&tmp_path, &path) {
+                    log::error!("Failed to rename temp quran config {} -> {}: {}", tmp_path.display(), path.display(), e);
+                    let _ = std::fs::write(&path, &s);
                 } else {
-                    log::debug!("Quran config saved successfully to {}", path.display());
+                    log::debug!("Quran config saved atomically to {}", path.display());
                 }
             }
             Err(e) => {
@@ -585,6 +616,34 @@ impl ConfigStore {
                     q.preloaded_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                 }
             }
+            "dailyStreak" => q.daily_streak = value.as_i64(),
+            "lastCompletedDate" => q.last_completed_date = value.as_str().map(|s| s.to_string()),
+            "lastCompletedTime" => q.last_completed_time = value.as_i64(),
+            "totalReadCount" => q.total_read_count = value.as_i64(),
+            "completedPages" => q.completed_pages = Some(value),
+            "recentPagesPerSession" => q.recent_pages_per_session = value.as_i64(),
+            "dayStartHour" => q.day_start_hour = value.as_i64(),
+            "lastReviewDate" => q.last_review_date = value.as_str().map(|s| s.to_string()),
+            "reviewCycleStartDate" => q.review_cycle_start_date = value.as_str().map(|s| s.to_string()),
+            "reviewSessionStart" => q.review_session_start = value.as_i64(),
+            "reviewRetryPages" => {
+                if let Some(arr) = value.as_array() {
+                    q.review_retry_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                }
+            }
+            "lastRecentReviewDate" => q.last_recent_review_date = value.as_str().map(|s| s.to_string()),
+            "recentRetryPages" => {
+                if let Some(arr) = value.as_array() {
+                    q.recent_retry_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                }
+            }
+            "testModeEnabled" => q.test_mode_enabled = value.as_bool(),
+            "widgetShownAt" => q.widget_shown_at = value.as_i64(),
+            "weakPages" => {
+                if let Some(arr) = value.as_array() {
+                    q.weak_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                }
+            }
             _ => log::warn!("Unknown quran config key: {}", key),
         }
     }
@@ -630,6 +689,34 @@ impl ConfigStore {
                             q.preloaded_pages = Some(arr.iter().filter_map(|x| x.as_i64()).collect());
                         }
                     }
+                    "dailyStreak" => q.daily_streak = v.as_i64(),
+                    "lastCompletedDate" => q.last_completed_date = v.as_str().map(|s| s.to_string()),
+                    "lastCompletedTime" => q.last_completed_time = v.as_i64(),
+                    "totalReadCount" => q.total_read_count = v.as_i64(),
+                    "completedPages" => q.completed_pages = Some(v.clone()),
+                    "recentPagesPerSession" => q.recent_pages_per_session = v.as_i64(),
+                    "dayStartHour" => q.day_start_hour = v.as_i64(),
+                    "lastReviewDate" => q.last_review_date = v.as_str().map(|s| s.to_string()),
+                    "reviewCycleStartDate" => q.review_cycle_start_date = v.as_str().map(|s| s.to_string()),
+                    "reviewSessionStart" => q.review_session_start = v.as_i64(),
+                    "reviewRetryPages" => {
+                        if let Some(arr) = v.as_array() {
+                            q.review_retry_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                        }
+                    }
+                    "lastRecentReviewDate" => q.last_recent_review_date = v.as_str().map(|s| s.to_string()),
+                    "recentRetryPages" => {
+                        if let Some(arr) = v.as_array() {
+                            q.recent_retry_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                        }
+                    }
+                    "testModeEnabled" => q.test_mode_enabled = v.as_bool(),
+                    "widgetShownAt" => q.widget_shown_at = v.as_i64(),
+                    "weakPages" => {
+                        if let Some(arr) = v.as_array() {
+                            q.weak_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
+                        }
+                    }
                     _ => log::warn!("Unknown quran config key in update: {}", k),
                 }
             }
@@ -659,6 +746,22 @@ impl ConfigStore {
             "hideHeader" => { q.hide_header = None; true }
             "memorizedPages" => { q.memorized_pages = None; true }
             "preloadedPages" => { q.preloaded_pages = None; true }
+            "dailyStreak" => { q.daily_streak = None; true }
+            "lastCompletedDate" => { q.last_completed_date = None; true }
+            "lastCompletedTime" => { q.last_completed_time = None; true }
+            "totalReadCount" => { q.total_read_count = None; true }
+            "completedPages" => { q.completed_pages = None; true }
+            "recentPagesPerSession" => { q.recent_pages_per_session = None; true }
+            "dayStartHour" => { q.day_start_hour = None; true }
+            "lastReviewDate" => { q.last_review_date = None; true }
+            "reviewCycleStartDate" => { q.review_cycle_start_date = None; true }
+            "reviewSessionStart" => { q.review_session_start = None; true }
+            "reviewRetryPages" => { q.review_retry_pages = None; true }
+            "lastRecentReviewDate" => { q.last_recent_review_date = None; true }
+            "recentRetryPages" => { q.recent_retry_pages = None; true }
+            "testModeEnabled" => { q.test_mode_enabled = None; true }
+            "widgetShownAt" => { q.widget_shown_at = None; true }
+            "weakPages" => { q.weak_pages = None; true }
             _ => {
                 log::warn!("Unknown quran config key to remove: {}", key);
                 false
@@ -689,6 +792,22 @@ impl ConfigStore {
             "hideHeader".to_string(),
             "memorizedPages".to_string(),
             "preloadedPages".to_string(),
+            "dailyStreak".to_string(),
+            "lastCompletedDate".to_string(),
+            "lastCompletedTime".to_string(),
+            "totalReadCount".to_string(),
+            "completedPages".to_string(),
+            "recentPagesPerSession".to_string(),
+            "dayStartHour".to_string(),
+            "lastReviewDate".to_string(),
+            "reviewCycleStartDate".to_string(),
+            "reviewSessionStart".to_string(),
+            "reviewRetryPages".to_string(),
+            "lastRecentReviewDate".to_string(),
+            "recentRetryPages".to_string(),
+            "testModeEnabled".to_string(),
+            "widgetShownAt".to_string(),
+            "weakPages".to_string(),
         ];
         *q = QuranConfig::default();
         keys

@@ -101,6 +101,8 @@ pub fn show_widget(
 
     if let Some(existing) = app.get_webview_window(WIDGET_LABEL) {
         let _ = existing.destroy();
+        // Brief yield to let the webview destruction complete before recreating
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
 
     let cfg = store.cfg_get();
@@ -187,11 +189,11 @@ pub fn show_widget(
             return;
         }
     };
-    guard.release();
 
     let app_for_listener = app.clone();
     let store_for_listener = store.clone();
     let win_for_listener = window.clone();
+    let save_pending = Arc::new(AtomicBool::new(false));
     window.on_window_event(move |event| match event {
         WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
             if let Ok(pos) = win_for_listener.outer_position() {
@@ -201,14 +203,25 @@ pub fn show_widget(
                     store_for_listener.cfg_set("widgetY", json!(pos.y as f64 / scale));
                     store_for_listener.cfg_set("widgetW", json!(size.width as f64 / scale));
                     store_for_listener.cfg_set("widgetH", json!(size.height as f64 / scale));
-                    store_for_listener.save_cfg(&app_for_listener);
-                    log::debug!("Widget geometry saved: pos=({},{}) size=({},{}) scale={}", 
-                        pos.x, pos.y, size.width, size.height, scale);
+                    // Debounce: only schedule one save at a time
+                    if !save_pending.swap(true, Ordering::SeqCst) {
+                        let app_c = app_for_listener.clone();
+                        let store_c = store_for_listener.clone();
+                        let flag = save_pending.clone();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(std::time::Duration::from_millis(500));
+                            store_c.save_cfg(&app_c);
+                            flag.store(false, Ordering::SeqCst);
+                        });
+                    }
                 }
             }
         }
         _ => {}
     });
+
+    // Release the guard after window setup is complete
+    guard.release();
 }
 
 pub fn destroy_widget(app: &AppHandle) {
@@ -282,6 +295,7 @@ pub fn create_quran_window(app: &AppHandle, store: &ConfigStore) {
         let app_for_listener = app.clone();
         let store_for_listener = store.clone();
         let win_for_listener = window.clone();
+        let q_save_pending = Arc::new(AtomicBool::new(false));
         window.on_window_event(move |event| match event {
             WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
                 if let Ok(pos) = win_for_listener.outer_position() {
@@ -293,9 +307,17 @@ pub fn create_quran_window(app: &AppHandle, store: &ConfigStore) {
                             .quran_set("widgetCustomWidth", json!(size.width as f64 / scale));
                         store_for_listener
                             .quran_set("widgetCustomHeight", json!(size.height as f64 / scale));
-                        store_for_listener.save_quran_cfg(&app_for_listener);
-                        log::debug!("Quran geometry saved: pos=({},{}) size=({},{}) scale={}", 
-                            pos.x, pos.y, size.width, size.height, scale);
+                        // Debounce: only schedule one save at a time
+                        if !q_save_pending.swap(true, Ordering::SeqCst) {
+                            let app_c = app_for_listener.clone();
+                            let store_c = store_for_listener.clone();
+                            let flag = q_save_pending.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_millis(500));
+                                store_c.save_quran_cfg(&app_c);
+                                flag.store(false, Ordering::SeqCst);
+                            });
+                        }
                     }
                 }
             }
@@ -309,8 +331,9 @@ pub fn create_quran_window(app: &AppHandle, store: &ConfigStore) {
 pub fn show_quran_window(app: &AppHandle) {
     log::debug!("Showing Quran window");
     if let Some(w) = app.get_webview_window(QURAN_LABEL) {
-        let _ = w.eval("localStorage.setItem('showQuranWidget', 'true'); window.location.reload();");
-        log::debug!("Quran window reload triggered");
+        // Set the trigger flag and call initQuranWidget directly to avoid full page reload overhead
+        let _ = w.eval("localStorage.setItem('showQuranWidget', 'true'); if (typeof initQuranWidget === 'function') { initQuranWidget(); } else { window.location.reload(); }");
+        log::debug!("Quran widget init triggered");
     } else {
         log::warn!("Quran window not found, cannot show");
     }

@@ -167,7 +167,12 @@ async function getMultiplePagesFromBG(pageNumbers) {
 }
 
 async function showRecentReviewPage(recentData, widgetSize, hideHeader, _attempts = 0) {
-  if (_attempts >= recentData.pages.length) return;
+  if (_attempts >= recentData.pages.length) {
+    // All attempts exhausted — fall through to normal memorization
+    const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: false });
+    await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || widgetSize, data.hideHeader || hideHeader);
+    return;
+  }
 
   const pps = recentData.pagesPerSession > 0
     ? recentData.pagesPerSession
@@ -411,10 +416,8 @@ async function initQuranWidget() {
       });
     } catch (e) { return abortAndHide(); }
 
-    
 
-    const intervalMinutes = data.memorizationInterval;
-    const lastCompletedTime = data.lastCompletedTime;
+
     const widgetSize = data.widgetSize || 'medium';
     const hideHeader = data.hideHeader || false;
 
@@ -487,6 +490,7 @@ async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0)
 }
 
 async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
+  currentPage = parseInt(currentPage, 10) || 1;
   if (currentPage > 604) {
     currentPage = 1;
     await window.api.invoke('q:store:set', { currentQuranPage: 1 });
@@ -511,6 +515,7 @@ async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
   const pageData = await getPageAyahsFromBG(currentPage);
   if (!pageData) {
     console.error('No Ayahs found for page', currentPage);
+    abortAndHide();
     return;
   }
 
@@ -562,7 +567,8 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const pageNumber = firstPage.pageNum;
   const sessionCount = sessionPages.length;
 
-  const reviewProgressText = `بعيد: ${reviewData.currentIndex + 1}–${reviewData.currentIndex + sessionCount} من ${reviewData.totalToday}`;
+  const globalIdx = reviewData.globalIndex || reviewData.currentIndex;
+  const reviewProgressText = `بعيد: ${globalIdx + 1}–${globalIdx + sessionCount} من ${reviewData.totalToday}`;
   const dayProgressText = `يوم ${reviewData.dayIndex} من ${reviewData.totalDays}`;
 
   const testBtnHtml = `<button class="quran-widget-test-btn${testModeOn ? ' active' : ''}" id="quran-test-toggle" title="وضع الاختبار">👁️</button>`;
@@ -580,9 +586,9 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
         </div>
         <div class="quran-widget-progress-container">
           <div class="quran-widget-progress-bar-wrapper">
-            <div class="quran-widget-progress-bar quran-widget-distant-bar" style="width: ${Math.min(((reviewData.currentIndex + sessionCount) / reviewData.totalToday) * 100, 100)}%"></div>
+            <div class="quran-widget-progress-bar quran-widget-distant-bar" style="width: ${Math.min(((globalIdx + sessionCount) / reviewData.totalToday) * 100, 100)}%"></div>
           </div>
-          <div class="quran-widget-progress-text">${reviewData.currentIndex + 1} / ${reviewData.totalToday}</div>
+          <div class="quran-widget-progress-text">${globalIdx + 1} / ${reviewData.totalToday}</div>
         </div>
       </div>
     </div>
@@ -691,7 +697,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       // تحديث sessionStart للجلسة التالية
       await StorageManager.advanceReviewSession(newIndex);
       const newReviewData = await StorageManager.getTodayReviewPages();
-      allDone = newIndex >= newReviewData.pages.length;
+      allDone = newIndex >= newReviewData.totalToday;
     } catch (e) {
       console.warn('Quran Widget: distant-done error', e);
     }

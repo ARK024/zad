@@ -49,12 +49,27 @@ impl DataLoader {
         Self::default()
     }
 
-    /// Loads `Riyadh_AlSaliheen_V2.json` from the data directory. Returns true if at least
-    /// one hadith was loaded.
-    pub fn load_hadith_data(&self, _data_dir: &Path) -> bool {
-        let raw = include_str!("../../data/Riyadh_AlSaliheen_V2.json");
+    /// Loads `Riyadh_AlSaliheen_V2.json`. Tries `data_dir` on disk first,
+    /// falls back to the compile-time embedded copy.
+    pub fn load_hadith_data(&self, data_dir: &Path) -> bool {
+        let external_path = data_dir.join("Riyadh_AlSaliheen_V2.json");
+        let raw: std::borrow::Cow<'_, str> = if external_path.exists() {
+            match std::fs::read_to_string(&external_path) {
+                Ok(s) => {
+                    log::info!("Loaded hadith data from disk: {:?}", external_path);
+                    std::borrow::Cow::Owned(s)
+                }
+                Err(e) => {
+                    log::warn!("Failed to read {:?}: {}, falling back to embedded data", external_path, e);
+                    std::borrow::Cow::Borrowed(include_str!("../../data/Riyadh_AlSaliheen_V2.json"))
+                }
+            }
+        } else {
+            log::debug!("External hadith file not found at {:?}, using embedded data", external_path);
+            std::borrow::Cow::Borrowed(include_str!("../../data/Riyadh_AlSaliheen_V2.json"))
+        };
         
-        let parsed: Value = match serde_json::from_str(raw) {
+        let parsed: Value = match serde_json::from_str(&raw) {
             Ok(v) => {
                 log::debug!("Successfully parsed hadith JSON ({} bytes)", raw.len());
                 v
@@ -121,10 +136,25 @@ impl DataLoader {
         has_data
     }
 
-    pub fn load_quran_data(&self, _data_dir: &Path) {
-        let raw = include_str!("../../data/quran.json");
+    pub fn load_quran_data(&self, data_dir: &Path) {
+        let external_path = data_dir.join("quran.json");
+        let raw: std::borrow::Cow<'_, str> = if external_path.exists() {
+            match std::fs::read_to_string(&external_path) {
+                Ok(s) => {
+                    log::info!("Loaded quran data from disk: {:?}", external_path);
+                    std::borrow::Cow::Owned(s)
+                }
+                Err(e) => {
+                    log::warn!("Failed to read {:?}: {}, falling back to embedded data", external_path, e);
+                    std::borrow::Cow::Borrowed(include_str!("../../data/quran.json"))
+                }
+            }
+        } else {
+            log::debug!("External quran file not found at {:?}, using embedded data", external_path);
+            std::borrow::Cow::Borrowed(include_str!("../../data/quran.json"))
+        };
         
-        if let Ok(parsed) = serde_json::from_str::<Value>(raw) {
+        if let Ok(parsed) = serde_json::from_str::<Value>(&raw) {
             if let Some(arr) = parsed.as_array().cloned() {
                 log::info!("Loaded {} ayahs from quran.json", arr.len());
                 self.inner.write().quran = arr;

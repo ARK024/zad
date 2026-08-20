@@ -3,7 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https:">
+  <title>رياض الصالحين - زاد المسلم</title>
   <link rel="stylesheet" href="styles/widget.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,14 +21,14 @@
         <span class="badge" id="badge">—</span>
       </div>
       <div class="hdr-r">
-        <button class="ibtn sz" id="fzD" title="تصغير الخط">أ−</button>
-        <button class="ibtn sz" id="fzU" title="تكبير الخط">أ+</button>
-        <button class="ibtn cls" id="btnClose" title="إغلاق  (Esc)">✕</button>
+        <button class="ibtn sz" id="fzD" title="تصغير الخط" aria-label="تصغير الخط">أ−</button>
+        <button class="ibtn sz" id="fzU" title="تكبير الخط" aria-label="تكبير الخط">أ+</button>
+        <button class="ibtn cls" id="btnClose" title="إغلاق  (Esc)" aria-label="إغلاق">✕</button>
       </div>
     </div>
 
     <div class="prog">
-      <div class="prog-fill" id="prog" style="width:0%"></div>
+      <div class="prog-fill" id="prog" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
 
     <div class="meta" id="meta">
@@ -54,7 +56,7 @@
       </div>
     </div>
 
-    <span class="resize-hint">↔ قابل للتغيير حجماً</span>
+    <span class="resize-hint" aria-hidden="true">↔ قابل للتغيير حجماً</span>
   </div>
 
   <script src="tauri-shim.js"></script>

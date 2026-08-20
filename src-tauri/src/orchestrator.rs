@@ -1,5 +1,5 @@
 use crate::config::ConfigStore;
-use chrono::{Datelike, Local};
+use chrono::{Datelike, Local, Timelike};
 use parking_lot::Mutex;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -33,9 +33,13 @@ pub fn minutes_to_ms(m: i64) -> i64 {
     m * 60 * 1000
 }
 
-/// Today as `YYYY-MM-DD` (local time).
-fn today_string() -> String {
-    let now = Local::now();
+/// Today as `YYYY-MM-DD` (local time), respecting `dayStartHour`.
+/// If the current hour is before `day_start_hour`, the effective date is yesterday.
+fn today_string_with_offset(day_start_hour: u32) -> String {
+    let mut now = Local::now();
+    if (now.hour()) < day_start_hour {
+        now = now - chrono::Duration::days(1);
+    }
     format!("{:04}-{:02}-{:02}", now.year(), now.month(), now.day())
 }
 
@@ -46,7 +50,11 @@ pub fn is_quran_goal_met(quran_cfg: &Value) -> bool {
         .and_then(|v| v.as_i64())
         .filter(|n| *n > 0)
         .unwrap_or(1);
-    let today = today_string();
+    let day_start_hour = quran_cfg
+        .get("dayStartHour")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+    let today = today_string_with_offset(day_start_hour);
     let recent = quran_cfg
         .get("recentReadings")
         .and_then(|v| v.as_array())

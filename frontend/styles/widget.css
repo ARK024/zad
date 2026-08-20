@@ -11,7 +11,7 @@
 :root {
   --bg: #ffffff;
   --surface: #ffffff;
-  --border: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
   --border-glow: rgba(46, 204, 113, 0.3);
   --text: #1a202c;
   --muted: #4a5568;
@@ -50,8 +50,6 @@ html, body {
   display: flex; flex-direction: column;
   height: 100%; border-radius: 16px;
   background: var(--bg);
-  
-  -webkit-
   border: 1px solid var(--border);
   box-shadow: var(--shadow), inset 0 1px 1px rgba(255,255,255,0.15);
   overflow: hidden;

@@ -30,6 +30,23 @@ const ALLOWED_QURAN_KEYS: &[&str] = &[
     "hideHeader",
     "memorizedPages",
     "preloadedPages",
+    // Keys previously missing — used by quran_storage.js / quran_content.js
+    "dailyStreak",
+    "lastCompletedDate",
+    "lastCompletedTime",
+    "totalReadCount",
+    "completedPages",
+    "recentPagesPerSession",
+    "dayStartHour",
+    "lastReviewDate",
+    "reviewCycleStartDate",
+    "reviewSessionStart",
+    "reviewRetryPages",
+    "lastRecentReviewDate",
+    "recentRetryPages",
+    "testModeEnabled",
+    "widgetShownAt",
+    "weakPages",
 ];
 
 fn is_allowed_quran_key(key: &str) -> bool {
@@ -211,7 +228,12 @@ pub fn q_store_get(store: State<'_, ConfigStore>, keys: Value) -> Value {
         let mut out = serde_json::Map::new();
         for (k, default_v) in obj {
             let v = q.get(k).cloned();
-            out.insert(k.clone(), v.unwrap_or_else(|| default_v.clone()));
+            // Treat stored `null` the same as missing — fall back to caller's default.
+            let resolved = match v {
+                Some(Value::Null) | None => default_v.clone(),
+                Some(val) => val,
+            };
+            out.insert(k.clone(), resolved);
         }
         return Value::Object(out);
     }
@@ -425,7 +447,7 @@ pub fn s_save(
     };
 
     let interval = parse_int("interval", 30).max(1);
-    let font_size = parse_int("fontSize", 17).clamp(12, 72);
+    let font_size = parse_int("fontSize", 22).clamp(12, 72);
     let font_family = parse_str(
         "fontFamily",
         cur_cfg
@@ -547,8 +569,14 @@ pub async fn s_restore(
     app: AppHandle,
     store: State<'_, ConfigStore>,
     data: State<'_, DataLoader>,
+    ctx: State<'_, crate::AppContext>,
 ) -> Result<Value, String> {
-    Ok(crate::backup::do_restore(&app, &store, &data).await)
+    let result = crate::backup::do_restore(&app, &store, &data).await;
+    // Restart orchestrator so restored timing/mode settings take effect immediately
+    if result.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
+        ctx.restart_orchestrator(&app);
+    }
+    Ok(result)
 }
 
 #[tauri::command]

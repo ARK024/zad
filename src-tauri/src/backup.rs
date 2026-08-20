@@ -55,12 +55,18 @@ pub async fn do_backup(app: &AppHandle) -> Value {
         "version": 2,
         "date": chrono::Utc::now().to_rfc3339(),
         "cfg": store.cfg_get(),
+        "quran": store.quran_get(),
     });
     
-    match std::fs::write(
-        &path,
-        serde_json::to_string_pretty(&backup).unwrap_or_default(),
-    ) {
+    let backup_str = match serde_json::to_string_pretty(&backup) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to serialize backup: {}", e);
+            return json!({"ok": false, "err": format!("serialization_error: {}", e)});
+        }
+    };
+
+    match std::fs::write(&path, backup_str) {
         Ok(_) => {
             log::info!("Backup completed successfully: {:?}", path);
             json!({"ok": true, "path": path.to_string_lossy()})
@@ -164,6 +170,18 @@ pub async fn do_restore(app: &AppHandle, store: &ConfigStore, data: &DataLoader)
     };
 
     tray::refresh(app, store, data);
+
+    // Restore Quran data if present in backup
+    if let Some(quran_data) = parsed.get("quran") {
+        if let Some(obj) = quran_data.as_object() {
+            for (k, v) in obj {
+                store.quran_set(k, v.clone());
+            }
+            store.save_quran_cfg(app);
+            log::info!("Quran data restored successfully");
+        }
+    }
+
     log::info!("Restore completed successfully");
     json!({"ok": true})
 }
