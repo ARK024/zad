@@ -6,27 +6,12 @@ function toAr(n) {
   return String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 }
 
-// Cache DOM elements once to avoid repeated lookups
-const $ = id => document.getElementById(id);
-const _el = {
-  scrollCtn: $('scrollCtn'),
-  badge: $('badge'),
-  prog: $('prog'),
-  counter: $('counter'),
-  pct: $('pct'),
-  btnForgot: $('btnForgot'),
-  btnMem: $('btnMem'),
-  meta: $('meta'),
-  chTag: $('chTag'),
-  narr: $('narr'),
-  hdth: $('hdth'),
-  btnPrev: $('btnPrev'),
-  btnNext: $('btnNext'),
-  fzD: $('fzD'),
-  fzU: $('fzU'),
-  btnClose: $('btnClose'),
-  btnHide: $('btnHide'),
-};
+// Cache DOM elements lazily to avoid repeated lookups and timing issues
+const _domCache = {};
+const $ = id => _domCache[id] || (_domCache[id] = document.getElementById(id));
+const _el = new Proxy({}, {
+  get: (_, id) => $(id)
+});
 
 let _firstLoad = true;
 let _fadeTimer = null; // prevent race conditions

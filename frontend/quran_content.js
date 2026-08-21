@@ -156,26 +156,11 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
-  pauseAllMedia();
-
-  const [position, sizeData, fontData] = await Promise.all([
-    loadWidgetPosition(),
-    getStoredWidgetSize(),
-    window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false })
-  ]);
+  const fontData = await window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false });
   const testModeOn = fontData.testModeEnabled || false;
 
   const widget = document.createElement('div');
   widget.id = 'quran-memorization-widget';
-
-  applyStoredSize(widget, sizeData);
-  if (!sizeData.width) widget.style.width = WIDGET_WIDTHS[widgetSize] || '380px';
-  if (position) {
-    widget.style.left = `${position.left}px`;
-    widget.style.top = `${position.top}px`;
-    widget.style.bottom = 'auto';
-    widget.style.right = 'auto';
-  }
 
   const firstPage = sessionPages[0];
   const surahTitle = firstPage.pageData.surahTitle;
@@ -252,9 +237,6 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   // لف الكلمات في span عشان الـ blur
   if (_recentBody) wrapWordsForTestMode(_recentBody);
 
-  makeWidgetDraggable(widget);
-  makeWidgetResizable(widget);
-
   // زر وضع الاختبار
   document.getElementById('quran-test-toggle')?.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -286,7 +268,6 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
       console.warn('Quran Widget: recent-skip error', e);
       _dismissingWidget = true;
     }
-    resumePausedMedia();
     widget.classList.add('hiding');
     setTimeout(() => { cleanupWidget(widget); _dismissingWidget = false; }, 300);
   });
@@ -316,7 +297,6 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
 
     setTimeout(async () => {
       try {
-        resumePausedMedia();
         _dismissingWidget = true;
         await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
       } catch (e) {
@@ -483,27 +463,11 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
-  pauseAllMedia();
-
-  // ─── اجمع كل الـ async data قبل لمس الـ DOM ───
-  const [position, sizeData, _reviewFontData] = await Promise.all([
-    loadWidgetPosition(),
-    getStoredWidgetSize(),
-    window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false })
-  ]);
+  const _reviewFontData = await window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false });
   const testModeOn = _reviewFontData.testModeEnabled || false;
 
   const widget = document.createElement('div');
   widget.id = 'quran-memorization-widget';
-
-  applyStoredSize(widget, sizeData);
-  if (!sizeData.width) widget.style.width = WIDGET_WIDTHS[widgetSize] || '380px';
-  if (position) {
-    widget.style.left = `${position.left}px`;
-    widget.style.top = `${position.top}px`;
-    widget.style.bottom = 'auto';
-    widget.style.right = 'auto';
-  }
 
   // عنوان الهدر: أول سورة في الجلسة
   const firstPage = sessionPages[0];
@@ -584,9 +548,6 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   // لف الكلمات في span عشان الـ blur
   if (_reviewBody) wrapWordsForTestMode(_reviewBody);
 
-  makeWidgetDraggable(widget);
-  makeWidgetResizable(widget);
-
   // زر وضع الاختبار
   document.getElementById('quran-test-toggle')?.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -618,7 +579,6 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       console.warn('Quran Widget: distant-skip error', e);
       _dismissingWidget = true;
     }
-    resumePausedMedia();
     widget.classList.add('hiding');
     setTimeout(() => {
       cleanupWidget(widget);
@@ -656,7 +616,6 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
 
     setTimeout(async () => {
       try {
-        resumePausedMedia();
         _dismissingWidget = true;
         await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
       } catch (e) {
@@ -676,26 +635,10 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
-  pauseAllMedia();
-
-  // ─── اجمع كل الـ async data قبل لمس الـ DOM ───
-  const [position, sizeData, fontData] = await Promise.all([
-    loadWidgetPosition(),
-    getStoredWidgetSize(),
-    window.api.invoke('q:store:get', { fontSizePx: 26 })
-  ]);
+  const fontData = await window.api.invoke('q:store:get', { fontSizePx: 26 });
 
   const widget = document.createElement('div');
   widget.id = 'quran-memorization-widget';
-
-  applyStoredSize(widget, sizeData);
-  if (!sizeData.width) widget.style.width = WIDGET_WIDTHS[widgetSize] || '380px';
-  if (position) {
-    widget.style.left = `${position.left}px`;
-    widget.style.top = `${position.top}px`;
-    widget.style.bottom = 'auto';
-    widget.style.right = 'auto';
-  }
 
   const safePageStats = pageStats || { today: 0, isMemorized: false };
   const readCountText = safePageStats.today > 0
@@ -769,9 +712,6 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
 
   document.body.appendChild(widget);
 
-  makeWidgetDraggable(widget);
-  makeWidgetResizable(widget);
-
   if (hideHeader) {
     const toggleBtn = document.getElementById('quran-header-toggle');
     const headerEl = document.getElementById('quran-header-content');
@@ -796,7 +736,6 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       console.warn('Quran Widget: hide-btn storage error', e);
       _dismissingWidget = true;
     }
-    resumePausedMedia();
     widget.classList.add('hiding');
     setTimeout(() => {
       cleanupWidget(widget);
@@ -826,7 +765,6 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     }
 
     setTimeout(() => {
-      resumePausedMedia();
       widget.classList.add('hiding');
       setTimeout(() => {
         cleanupWidget(widget);

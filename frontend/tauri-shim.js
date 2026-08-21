@@ -56,10 +56,11 @@
       if (listen) {
         // Clean up previous listener if re-registered
         if (_listeners.has(evt)) {
-          _listeners.get(evt)();
+          const old = _listeners.get(evt);
+          if (typeof old === 'function') old();
         }
         const unlistenPromise = listen(evt, (e) => fn(e.payload));
-        _listeners.set(evt, () => unlistenPromise.then(u => u()));
+        _listeners.set(evt, () => unlistenPromise.then(u => typeof u === 'function' && u()));
       }
     },
   };
@@ -70,7 +71,10 @@
     onHadith: async (cb) => {
       if (listen) {
         // Clean up previous listener
-        if (_hadithUnlisten) { _hadithUnlisten(); _hadithUnlisten = null; }
+        if (typeof _hadithUnlisten === 'function') {
+          _hadithUnlisten();
+          _hadithUnlisten = null;
+        }
         _hadithUnlisten = await listen('hadith', (e) => cb(e.payload));
       }
       invoke('widget_ready').catch(() => {});
