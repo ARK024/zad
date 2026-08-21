@@ -29,6 +29,7 @@ struct DataInner {
     chapter_map: HashMap<i64, String>,
     search_index: Vec<SearchEntry>,
     quran: Vec<Value>,
+    page_index: HashMap<i64, Vec<usize>>, // page_number -> indices into quran vec
 }
 
 struct SearchEntry {
@@ -157,7 +158,19 @@ impl DataLoader {
         if let Ok(parsed) = serde_json::from_str::<Value>(&raw) {
             if let Some(arr) = parsed.as_array().cloned() {
                 log::info!("Loaded {} ayahs from quran.json", arr.len());
-                self.inner.write().quran = arr;
+                // Build page index for O(1) lookups
+                let mut page_idx: HashMap<i64, Vec<usize>> = HashMap::new();
+                for (i, ayah) in arr.iter().enumerate() {
+                    if let Some(pg) = ayah.get("page").and_then(|v| v.as_i64()) {
+                        page_idx.entry(pg).or_default().push(i);
+                    }
+                }
+                log::info!("Built Quran page index: {} pages", page_idx.len());
+                {
+                    let mut inner = self.inner.write();
+                    inner.quran = arr;
+                    inner.page_index = page_idx;
+                }
             } else {
                 log::error!("Quran data is not an array format");
             }
@@ -238,17 +251,14 @@ impl DataLoader {
     /// Mirrors `getPageAyahs(pageNumber)` in src/main/data-loader.js.
     pub fn get_page_ayahs(&self, page_number: i64) -> Option<PageAyahs> {
         let inner = self.inner.read();
-        let page_ayahs: Vec<&Value> = inner
-            .quran
-            .iter()
-            .filter(|a| a.get("page").and_then(|v| v.as_i64()) == Some(page_number))
-            .collect();
-        if page_ayahs.is_empty() {
-            return None;
-        }
+        let indices = match inner.page_index.get(&page_number) {
+            Some(idx) => idx,
+            None => return None,
+        };
 
         let mut surah_names: Vec<String> = Vec::new();
-        for a in &page_ayahs {
+        for &i in indices {
+            let a = &inner.quran[i];
             let n = a
                 .get("sura_name_ar")
                 .or_else(|| a.get("surah_name_ar"))
@@ -260,9 +270,10 @@ impl DataLoader {
         }
         let surah_title = surah_names.join(" - ");
 
-        let ayah_text_html = page_ayahs
+        let ayah_text_html = indices
             .iter()
-            .map(|a| {
+            .map(|&i| {
+                let a = &inner.quran[i];
                 a.get("aya_text")
                     .or_else(|| a.get("text"))
                     .and_then(|v| v.as_str())
@@ -272,9 +283,10 @@ impl DataLoader {
             .collect::<Vec<_>>()
             .join(" ");
 
-        let first_ayah_html = page_ayahs
+        let first_ayah_html = indices
             .first()
-            .and_then(|a| {
+            .and_then(|&i| {
+                let a = &inner.quran[i];
                 a.get("aya_text")
                     .or_else(|| a.get("text"))
                     .and_then(|v| v.as_str())

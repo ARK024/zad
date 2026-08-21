@@ -139,24 +139,23 @@ fn init_file_logger() {
         path: std::path::PathBuf,
         max_size: u64,
         max_files: u32,
-        lock: std::sync::Mutex<()>,
+        writer: std::sync::Mutex<Option<std::io::BufWriter<std::fs::File>>>,
+        bytes_written: std::sync::atomic::AtomicU64,
     }
     
     impl FileLogger {
-        fn should_rotate(&self) -> bool {
-            if let Ok(metadata) = std::fs::metadata(&self.path) {
-                metadata.len() >= self.max_size
-            } else {
-                false
-            }
+        fn open_file(&self) -> Option<std::io::BufWriter<std::fs::File>> {
+            std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&self.path)
+                .ok()
+                .map(|f| std::io::BufWriter::new(f))
         }
         
         fn rotate(&self) {
-            // Remove oldest log file
             let oldest = format!("{}.{}", self.path.display(), self.max_files - 1);
             let _ = std::fs::remove_file(&oldest);
-            
-            // Shift existing rotated files
             for i in (1..self.max_files).rev() {
                 let old_path = if i == 1 {
                     self.path.clone()
@@ -168,19 +167,7 @@ fn init_file_logger() {
                     let _ = std::fs::rename(&old_path, &new_path);
                 }
             }
-            
-            // Create new log file
-            if let Ok(mut f) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&self.path)
-            {
-                let _ = writeln!(
-                    f,
-                    "[{}] log file rotated",
-                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-                );
-            }
+            self.bytes_written.store(0, std::sync::atomic::Ordering::Relaxed);
         }
     }
     
@@ -189,35 +176,52 @@ fn init_file_logger() {
             true
         }
         fn log(&self, record: &log::Record) {
-            let _guard = self.lock.lock().unwrap_or_else(|e| e.into_inner());
-            // Check if rotation is needed
-            if self.should_rotate() {
+            use std::io::Write;
+            let mut guard = self.writer.lock().unwrap_or_else(|e| e.into_inner());
+            
+            // Check rotation
+            if self.bytes_written.load(std::sync::atomic::Ordering::Relaxed) >= self.max_size {
+                drop(guard.take()); // close current file
                 self.rotate();
+                *guard = self.open_file();
             }
             
-            if let Ok(mut f) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&self.path)
-            {
-                let _ = writeln!(
-                    f,
-                    "[{}] {} {} - {}",
+            // Ensure we have a writer
+            if guard.is_none() {
+                *guard = self.open_file();
+            }
+            
+            if let Some(ref mut w) = *guard {
+                let msg = format!(
+                    "[{}] {} {} - {}\n",
                     chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
                     record.level(),
                     record.target(),
                     record.args()
                 );
+                let len = msg.len() as u64;
+                if w.write_all(msg.as_bytes()).is_ok() {
+                    self.bytes_written.fetch_add(len, std::sync::atomic::Ordering::Relaxed);
+                    let _ = w.flush();
+                }
             }
         }
-        fn flush(&self) {}
+        fn flush(&self) {
+            if let Ok(mut guard) = self.writer.lock() {
+                if let Some(ref mut w) = *guard {
+                    let _ = std::io::Write::flush(w);
+                }
+            }
+        }
     }
     
+    let initial_size = std::fs::metadata(&log_path).map(|m| m.len()).unwrap_or(0);
     let logger = FileLogger {
         path: log_path,
-        max_size: 1_048_576, // 1MB
+        max_size: 1_048_576,
         max_files: 5,
-        lock: std::sync::Mutex::new(()),
+        writer: std::sync::Mutex::new(None),
+        bytes_written: std::sync::atomic::AtomicU64::new(initial_size),
     };
     
     let _ = log::set_boxed_logger(Box::new(logger))

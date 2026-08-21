@@ -14,7 +14,7 @@ function toArabicNumerals(num) {
   return num.toString().split('').map(digit => arabicNumbers[digit] ?? digit).join('');
 }
 
-let pausedMediaElements = [];
+
 let _dismissingWidget = false;
 // eslint-disable-next-line no-unused-vars
 
@@ -54,36 +54,7 @@ function wrapWordsForTestMode(bodyEl) {
 
 
 
-function pauseAllMedia() {
-  pausedMediaElements = [];
-
-  const videos = document.querySelectorAll('video');
-  const audios = document.querySelectorAll('audio');
-
-  videos.forEach(video => {
-    if (!video.paused) {
-      pausedMediaElements.push(video);
-      video.pause();
-    }
-  });
-
-  audios.forEach(audio => {
-    if (!audio.paused) {
-      pausedMediaElements.push(audio);
-      audio.pause();
-    }
-  });
-}
-
-function resumePausedMedia() {
-  pausedMediaElements.forEach(media => {
-    try {
-      media.play();
-    } catch (e) {
-    }
-  });
-  pausedMediaElements = [];
-}
+// Media functions removed — no video/audio elements in desktop app
 
 let _fontInjected = false;
 
@@ -128,34 +99,7 @@ async function injectCustomFont() {
   _fontInjected = true;
 }
 
-function makeWidgetDraggable(_widget) {
-  // Disabled in desktop app: Electron handles window dragging natively via CSS app-region
-  return;
-}
-
-function makeWidgetResizable(_widget) {
-  // Disabled in desktop app
-  return;
-}
-
-async function loadWidgetPosition() {
-  return null;
-}
-
-async function getStoredWidgetSize() {
-  const size = await StorageManager.getWidgetSize();
-  const vpW = window.innerWidth - 16;
-  const vpH = window.innerHeight - 24;
-  return {
-    width: size.width ? `${Math.min(size.width, vpW)}px` : null,
-    maxHeight: size.height ? `${Math.min(size.height, vpH)}px` : `${Math.min(vpH, 860)}px`
-  };
-}
-
-function applyStoredSize(widget, sizeData) {
-  if (sizeData.width) widget.style.width = sizeData.width;
-  widget.style.maxHeight = sizeData.maxHeight;
-}
+// Widget positioning handled natively by Tauri window manager
 
 // البيانات تُجلَب من background.js عبر messaging
 async function getPageAyahsFromBG(pageNumber) {
@@ -898,30 +842,18 @@ if (document.readyState === 'loading') {
   initQuranWidget();
 }
 
-window.api.receive('q:store:changed', (changes) => { const areaName = 'local';
+window.api.receive('q:store:changed', (changes) => {
   try {
-    
-    if (areaName === 'local' && changes.lastCompletedTime) {
-      if (_dismissingWidget) {
-        
-        return;
-      }
+    if (changes.lastCompletedTime) {
+      if (_dismissingWidget) return;
 
       const widget = document.getElementById('quran-memorization-widget');
       if (widget) {
-        resumePausedMedia();
         widget.classList.add('hiding');
         setTimeout(() => cleanupWidget(widget), 300);
       }
-
-      
     }
   } catch (e) {
     console.warn('Quran Widget: storage.onChanged error', e);
   }
 });
-
-// ─── setTimeout ذكي بدل setInterval ───
-
-
-

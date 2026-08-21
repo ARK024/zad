@@ -331,7 +331,7 @@ impl ConfigStore {
         };
         
         let snapshot = self.cfg.lock().clone();
-        match serde_json::to_string_pretty(&snapshot) {
+        match serde_json::to_string(&snapshot) {
             Ok(s) => {
                 let tmp_path = path.with_extension("json.tmp");
                 if let Err(e) = std::fs::write(&tmp_path, &s) {
@@ -433,7 +433,7 @@ impl ConfigStore {
         };
         
         let snapshot = self.quran.lock().clone();
-        match serde_json::to_string_pretty(&snapshot) {
+        match serde_json::to_string(&snapshot) {
             Ok(s) => {
                 let tmp_path = path.with_extension("json.tmp");
                 if let Err(e) = std::fs::write(&tmp_path, &s) {

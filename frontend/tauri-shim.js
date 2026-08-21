@@ -48,21 +48,30 @@
     }
   }
 
+  const _listeners = new Map();
   window.api = {
     invoke: apiInvoke,
     receive: (channel, fn) => {
       const evt = translate(channel);
-      if (listen) listen(evt, (e) => fn(e.payload));
+      if (listen) {
+        // Clean up previous listener if re-registered
+        if (_listeners.has(evt)) {
+          _listeners.get(evt)();
+        }
+        const unlistenPromise = listen(evt, (e) => fn(e.payload));
+        _listeners.set(evt, () => unlistenPromise.then(u => u()));
+      }
     },
   };
 
   // Widget bridge — used by widget.js.
+  let _hadithUnlisten = null;
   window.W = {
     onHadith: async (cb) => {
       if (listen) {
-        // Make sure we are subscribed before signalling readiness, otherwise the
-        // main process can emit `hadith` before we are listening.
-        await listen('hadith', (e) => cb(e.payload));
+        // Clean up previous listener
+        if (_hadithUnlisten) { _hadithUnlisten(); _hadithUnlisten = null; }
+        _hadithUnlisten = await listen('hadith', (e) => cb(e.payload));
       }
       invoke('widget_ready').catch(() => {});
     },

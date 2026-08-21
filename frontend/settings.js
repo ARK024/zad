@@ -24,16 +24,20 @@ function showStatus(msg, ok) {
 
 async function load() {
   // Populate Fonts
-  const systemFonts = await window.api.invoke('m:get-fonts');
-  const selFont = gid('selFontFam');
-  systemFonts.forEach(f => {
-    if (!Array.from(selFont.options).some(o => o.value === f)) {
-      const opt = document.createElement('option');
-      opt.value = f;
-      opt.textContent = f;
-      selFont.appendChild(opt);
-    }
-  });
+  try {
+    const systemFonts = await window.api.invoke('m:get-fonts');
+    const selFont = gid('selFontFam');
+    systemFonts.forEach(f => {
+      if (!Array.from(selFont.options).some(o => o.value === f)) {
+        const opt = document.createElement('option');
+        opt.value = f;
+        opt.textContent = f;
+        selFont.appendChild(opt);
+      }
+    });
+  } catch (e) {
+    console.warn('Failed to load system fonts:', e);
+  }
 
   // Load Hadith & System Config
   const s = await S.get();
@@ -67,6 +71,7 @@ async function load() {
   gid('cTakhrij').value = s.cTakhrij || '#1a9850';
   gid('cSharh').value = s.cSharh || '#b35900';
   gid('chkDark').checked = s.theme === 'dark';
+  document.body.classList.toggle('dark', s.theme === 'dark');
   gid('chkAuto').checked = !!s.autoLaunch;
   gid('selAppMode').value = s.appMode || 'sequential';
   gid('hReviewEnabled').checked = !!s.hReviewEnabled;
@@ -114,6 +119,10 @@ gid('slFont').addEventListener('input', () => {
 });
 gid('quranFontSize').addEventListener('input', () => {
   gid('quranLblFont').textContent = gid('quranFontSize').value;
+});
+
+gid('chkDark').addEventListener('change', () => {
+  document.body.classList.toggle('dark', gid('chkDark').checked);
 });
 
 // Save All
@@ -262,6 +271,7 @@ gid('btnResetQuranGeo').addEventListener('click', async () => {
 
 // Search
 let searchTimer = null;
+let searchGen = 0; // generation counter to prevent stale results
 const inpSearch = gid('inpSearch');
 const results = gid('results');
 inpSearch.addEventListener('input', () => {
@@ -271,24 +281,31 @@ inpSearch.addEventListener('input', () => {
     results.style.display = 'none';
     return;
   }
+  const gen = ++searchGen;
   searchTimer = setTimeout(async () => {
     const list = await S.search(q);
-    renderResults(list, q);
+    if (gen === searchGen) renderResults(list, q); // skip stale results
   }, 280);
 });
+
+function escapeHTML(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
 function renderResults(list, q) {
   results.style.display = 'block';
   if (!list.length) {
-    results.innerHTML = '<div class="no-res">لا توجد نتائج لـ «' + q + '»</div>';
+    results.innerHTML = '<div class="no-res">لا توجد نتائج لـ «' + escapeHTML(q) + '»</div>';
     return;
   }
   results.innerHTML = list
     .map(
       r =>
         '<div class="r-item" data-i="' + r.index + '">' +
-        '<div class="r-meta">' + (r.chapter ? r.chapter + ' · ' : '') + (r.narrator || '') + '  (#' + (r.index + 1) + ')</div>' +
-        '<div class="r-text">' + r.preview + '…</div></div>',
+        '<div class="r-meta">' + (r.chapter ? escapeHTML(r.chapter) + ' · ' : '') + escapeHTML(r.narrator || '') + '  (#' + (r.index + 1) + ')</div>' +
+        '<div class="r-text">' + escapeHTML(r.preview) + '…</div></div>',
     )
     .join('');
   results.querySelectorAll('.r-item').forEach(el => {
@@ -299,7 +316,7 @@ function renderResults(list, q) {
         S.showNow();
         results.style.display = 'none';
         inpSearch.value = '';
-        showStatus('الحديث ' + (parseInt(el.dataset.i) + 1));
+        showStatus('الحديث ' + (parseInt(el.dataset.i, 10) + 1));
       }
     });
   });

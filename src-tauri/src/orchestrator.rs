@@ -249,8 +249,8 @@ mod tests {
     #[test]
     fn quran_goal_met_when_recent_readings_today_meets_goal() {
         let q = json!({"dailyGoal": 2, "recentReadings": [
-            {"date": today_string()},
-            {"date": today_string()},
+            {"date": today_string_with_offset(0)},
+            {"date": today_string_with_offset(0)},
             {"date": "1970-01-01"}
         ]});
         assert!(is_quran_goal_met(&q));
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn quran_goal_not_met_when_recent_below_goal() {
         let q = json!({"dailyGoal": 3, "recentReadings": [
-            {"date": today_string()}
+            {"date": today_string_with_offset(0)}
         ]});
         assert!(!is_quran_goal_met(&q));
     }
@@ -285,7 +285,7 @@ mod tests {
         assert_eq!(get_active_interval_ms(&cfg, &q), 10 * 60 * 1000);
 
         let q2 = json!({"memorizationInterval": 10, "dailyGoal": 1, "recentReadings": [
-            {"date": today_string()}
+            {"date": today_string_with_offset(0)}
         ]});
         assert_eq!(get_active_interval_ms(&cfg, &q2), 30 * 60 * 1000);
     }
@@ -304,7 +304,7 @@ mod tests {
     fn sequential_shows_hadith_after_goal_met() {
         let o = Orchestrator::new();
         let cfg = json!({"appMode": "sequential"});
-        let q = json!({"dailyGoal": 1, "recentReadings": [{"date": today_string()}]});
+        let q = json!({"dailyGoal": 1, "recentReadings": [{"date": today_string_with_offset(0)}]});
         assert_eq!(
             o.decide_tick_action(&cfg, &q),
             TickAction::HideQuranShowHadith
