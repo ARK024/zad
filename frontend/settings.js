@@ -86,6 +86,7 @@ async function load() {
     reviewEnabled: false,
     recentReviewEnabled: false,
     reviewDays: 7,
+    reviewPagesPerSession: 10,
     hideHeader: false,
     currentQuranPage: 1,
   });
