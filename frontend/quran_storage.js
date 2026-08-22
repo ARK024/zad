@@ -223,7 +223,7 @@ const StorageManager = {
   // إعدادات عدد الصفحات في جلسة المراجعة
   async setReviewPagesPerSession(count) {
     const safeCount = Math.max(1, Math.min(50, parseInt(count) || 10));  // بين 1 و 50
-    await window.api.invoke('q:store:set', { reviewPagesPerSession: safeCount });
+    await window.api.invoke('q:store:set', { reviewPagesPerSession: safeCount, recentPagesPerSession: safeCount });
     return safeCount;
   },
 
@@ -422,6 +422,7 @@ const StorageManager = {
       recentReviewIndex: 0,
       lastRecentReviewDate: null,
       recentPagesPerSession: 0,
+      reviewPagesPerSession: 10,
       recentRetryPages: []
     });
     let currentIndex = data.recentReviewIndex || 0;
@@ -441,11 +442,13 @@ const StorageManager = {
     const basePages = recentPages.filter(p => !retryPages.includes(p));
     const allPages = [...basePages, ...retryPages];
 
+    const pagesPerSession = parseInt(data.recentPagesPerSession) || parseInt(data.reviewPagesPerSession) || 10;
+
     return {
       pages: allPages,
       currentIndex,
       totalToday: allPages.length,
-      pagesPerSession: parseInt(data.recentPagesPerSession) || 0,
+      pagesPerSession: pagesPerSession,
       enabled: true
     };
   },

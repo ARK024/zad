@@ -151,6 +151,7 @@ gid('btnSave').addEventListener('click', async () => {
     recentReviewEnabled: gid('quranRecentReviewEnabled').checked,
     reviewDays: parseInt(gid('quranReviewDays').value, 10) || 7,
     reviewPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
+    recentPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
     hideHeader: gid('quranHideHeader').checked,
   };
 
