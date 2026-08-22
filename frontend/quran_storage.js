@@ -266,16 +266,21 @@ const StorageManager = {
 
     const dayIndex = await this.getDayIndexInCycle(settings.days);
 
-    // نشيل الصفحات القريبة الأول، وبعدين نقسم الباقي على الأيام
-    const recentPages = await this.getRecentPages();
-    const recentSet = new Set(recentPages);
-    const nonRecentPages = memorizedPages.filter(p => !recentSet.has(p));
+    // نشيل الصفحات القريبة وصفحات اليوم، حتى لا تدخل في المراجعة البعيدة
+    const recentCutoff = this._daysAgoStr(7);
+    const recentData = await window.api.invoke('q:store:get', ['recentReadings']);
+    const recentOrTodaySet = new Set(
+      (recentData.recentReadings || [])
+        .filter(r => r.date >= recentCutoff)
+        .map(r => r.page)
+    );
+    const nonRecentPages = memorizedPages.filter(p => !recentOrTodaySet.has(p));
 
     const days = settings.days;
     const today = this.getTodayDate();
     let currentIndex = settings.reviewIndex;
     const sessionData = await window.api.invoke('q:store:get', {
-      reviewPagesPerSession: 0,
+      reviewPagesPerSession: 10,
       reviewSessionStart: 0,
       reviewRetryPages: []
     });
@@ -289,6 +294,26 @@ const StorageManager = {
         reviewIndex: 0, lastReviewDate: today,
         reviewSessionStart: 0, reviewRetryPages: []
       });
+    }
+
+    const pagesPerSession = parseInt(sessionData.reviewPagesPerSession) || settings.pagesPerSession || 10;
+
+    // لو مفيش صفحات بعيدة للمراجعة ومفيش صفحات إعادة
+    if (nonRecentPages.length === 0 && effectiveRetryPages.length === 0) {
+      return {
+        pages: [],
+        allPages: [],
+        currentIndex: 0,
+        globalIndex: 0,
+        totalToday: 0,
+        currentSession: 0,
+        totalSessions: 0,
+        pagesPerSession: pagesPerSession,
+        dayIndex: dayIndex + 1,
+        totalDays: settings.days,
+        sessionStart: 0,
+        sessionEnd: 0
+      };
     }
 
     // نقسم الصفحات غير القريبة على الأيام بالتساوي
@@ -307,7 +332,6 @@ const StorageManager = {
     const todayPages = [...basePages, ...retryPages];
 
     // حساب الجلسات بناءً على reviewPagesPerSession
-    const pagesPerSession = sessionData.reviewPagesPerSession || 10;  // افتراضي: 10
     const totalSessions = pagesPerSession > 0 ? Math.ceil(todayPages.length / pagesPerSession) : 1;
     const currentSession = pagesPerSession > 0 ? Math.floor(currentIndex / pagesPerSession) : 0;
     
