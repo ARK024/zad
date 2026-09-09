@@ -110,6 +110,29 @@ async function getMultiplePagesFromBG(pageNumbers) {
   return window.api.invoke('q:bg:message', { type: 'getMultiplePages', pages: pageNumbers });
 }
 
+function bindHeaderToggle(toggleBtn, collapseBtn, headerEl) {
+  toggleBtn?.addEventListener('click', async () => {
+    if (headerEl) headerEl.style.display = 'flex';
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    try {
+      await window.api.invoke('q:store:set', { hideHeader: false });
+    } catch (e) {
+      console.warn('Quran Widget: failed to save hideHeader state', e);
+    }
+  });
+
+  collapseBtn?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (headerEl) headerEl.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'flex';
+    try {
+      await window.api.invoke('q:store:set', { hideHeader: true });
+    } catch (e) {
+      console.warn('Quran Widget: failed to save hideHeader state', e);
+    }
+  });
+}
+
 async function showRecentReviewPage(recentData, widgetSize, hideHeader, _attempts = 0) {
   if (_attempts >= recentData.pages.length) {
     // All attempts exhausted — fall through to normal memorization
@@ -250,15 +273,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const toggleBtn = document.getElementById('quran-header-toggle');
   const collapseBtn = document.getElementById('quran-header-collapse-btn');
   const headerEl = document.getElementById('quran-recent-header-content');
-  toggleBtn?.addEventListener('click', () => {
-    if (headerEl) headerEl.style.display = 'flex';
-    if (toggleBtn) toggleBtn.style.display = 'none';
-  });
-  collapseBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (headerEl) headerEl.style.display = 'none';
-    if (toggleBtn) toggleBtn.style.display = 'flex';
-  });
+  bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
 
   document.getElementById('quran-btn-recent-skip')?.addEventListener('click', async () => {
     try {
@@ -562,15 +577,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const revToggleBtn = document.getElementById('quran-review-toggle');
   const revCollapseBtn = document.getElementById('quran-review-collapse-btn');
   const revHeaderEl = document.getElementById('quran-review-header-content');
-  revToggleBtn?.addEventListener('click', () => {
-    if (revHeaderEl) revHeaderEl.style.display = 'flex';
-    if (revToggleBtn) revToggleBtn.style.display = 'none';
-  });
-  revCollapseBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (revHeaderEl) revHeaderEl.style.display = 'none';
-    if (revToggleBtn) revToggleBtn.style.display = 'flex';
-  });
+  bindHeaderToggle(revToggleBtn, revCollapseBtn, revHeaderEl);
 
   document.getElementById('quran-btn-skip')?.addEventListener('click', async () => {
     try {
@@ -716,15 +723,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   const toggleBtn = document.getElementById('quran-header-toggle');
   const collapseBtn = document.getElementById('quran-header-collapse-btn');
   const headerEl = document.getElementById('quran-header-content');
-  toggleBtn?.addEventListener('click', () => {
-    if (headerEl) headerEl.style.display = 'flex';
-    if (toggleBtn) toggleBtn.style.display = 'none';
-  });
-  collapseBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (headerEl) headerEl.style.display = 'none';
-    if (toggleBtn) toggleBtn.style.display = 'flex';
-  });
+  bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
 
   document.getElementById('quran-btn-hide')?.addEventListener('click', async () => {
     try {
