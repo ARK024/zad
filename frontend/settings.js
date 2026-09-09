@@ -249,6 +249,38 @@ gid('btnSetStartPage').addEventListener('click', async () => {
   showStatus('تم تعيين صفحة البداية لـ ' + p);
 });
 
+gid('btnUndoLastMemorized').addEventListener('click', async () => {
+  if (typeof StorageManager !== 'undefined' && StorageManager.undoLastMemorization) {
+    const res = await StorageManager.undoLastMemorization();
+    if (res.success) {
+      await load();
+      showStatus(`تم التراجع عن حفظ الصفحة ${res.page} بنجاح!`, true);
+    } else {
+      showStatus(res.msg || 'لا توجد صفحات للتراجع عنها', false);
+    }
+  } else {
+    showStatus('تعذر تنفيذ التراجع', false);
+  }
+});
+
+gid('btnUnmemorizePage').addEventListener('click', async () => {
+  const p = parseInt(gid('quranUnmemorizePage').value, 10);
+  if (!p || p < 1 || p > 604) {
+    showStatus('يرجى إدخال رقم صفحة صحيح (1-604)', false);
+    return;
+  }
+  if (!confirm(`هل أنت متأكد من إلغاء حفظ الصفحة ${p} وإزالتها من سجل المحفوظ؟`)) return;
+
+  if (typeof StorageManager !== 'undefined' && StorageManager.unmemorizePage) {
+    await StorageManager.unmemorizePage(p);
+    gid('quranUnmemorizePage').value = '';
+    await load();
+    showStatus(`تم إلغاء حفظ الصفحة ${p} بنجاح`, true);
+  } else {
+    showStatus('تعذر تنفيذ العملية', false);
+  }
+});
+
 gid('btnPreload').addEventListener('click', async () => {
   const from = parseInt(gid('preloadFrom').value, 10);
   const to = parseInt(gid('preloadTo').value, 10);

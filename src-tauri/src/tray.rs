@@ -3,9 +3,9 @@ use crate::data_loader::DataLoader;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tauri::{
-    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager,
+    AppHandle, Emitter, Manager,
 };
 
 const ID_SHOW_QURAN: &str = "tray.show_quran";
@@ -15,6 +15,12 @@ const ID_NEXT_HADITH: &str = "tray.next_hadith";
 const ID_PREV_HADITH: &str = "tray.prev_hadith";
 const ID_OPEN_SETTINGS: &str = "tray.open_settings";
 const ID_QUIT: &str = "tray.quit";
+
+const ID_RESUME: &str = "tray.resume";
+const ID_PAUSE_30: &str = "tray.pause_30";
+const ID_PAUSE_60: &str = "tray.pause_60";
+const ID_PAUSE_120: &str = "tray.pause_120";
+const ID_PAUSE_EOD: &str = "tray.pause_eod";
 
 /// State carried through the menu/tray event handler. We use the default
 /// (Wry) runtime here because Tauri stores trays per-runtime.
@@ -37,12 +43,45 @@ impl Default for TrayState {
     }
 }
 
+fn calculate_eod_ts() -> i64 {
+    use chrono::TimeZone;
+    let now = chrono::Local::now();
+    if let Some(eod) = now.date_naive().and_hms_opt(23, 59, 59) {
+        if let chrono::LocalResult::Single(dt) = chrono::Local.from_local_datetime(&eod) {
+            return dt.timestamp_millis();
+        }
+    }
+    chrono::Utc::now().timestamp_millis() + 8 * 3600 * 1000
+}
+
+fn handle_pause(app: &AppHandle, ts: i64) {
+    if let (Some(store), Some(data), Some(ctx)) = (
+        app.try_state::<ConfigStore>(),
+        app.try_state::<DataLoader>(),
+        app.try_state::<crate::AppContext>(),
+    ) {
+        let val = serde_json::json!({ "pausedUntil": ts });
+        store.quran_update(&val);
+        store.save_quran_cfg(app);
+        ctx.restart_orchestrator(app);
+        if ts > 0 {
+            crate::windows::hide_quran_window(app);
+            crate::windows::destroy_widget(app);
+        }
+        refresh(app, &store, &data);
+        let _ = app.emit("q:store:changed", serde_json::json!({ "pausedUntil": ts }));
+    }
+}
+
 fn build_menu(
     app: &AppHandle,
     store: &ConfigStore,
     data: &DataLoader,
 ) -> tauri::Result<Menu<tauri::Wry>> {
     let cfg = store.cfg_get();
+    let q_cfg = store.quran_get();
+    let is_paused = crate::orchestrator::is_paused(&q_cfg);
+
     let total = data.hadiths_len().max(1);
     let idx = cfg.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
     let idx_display = (idx + 1).min(total);
@@ -55,6 +94,36 @@ fn build_menu(
         None::<&str>,
     )?;
     let sep1 = PredefinedMenuItem::separator(app)?;
+
+    // عناصر الاستراحة / الإيقاف المؤقت
+    let p30 = MenuItem::with_id(app, ID_PAUSE_30, "نصف ساعة (30 دقيقة)", true, None::<&str>)?;
+    let p60 = MenuItem::with_id(app, ID_PAUSE_60, "ساعة واحدة (60 دقيقة)", true, None::<&str>)?;
+    let p120 = MenuItem::with_id(app, ID_PAUSE_120, "ساعتان (120 دقيقة)", true, None::<&str>)?;
+    let peod = MenuItem::with_id(app, ID_PAUSE_EOD, "حتى نهاية اليوم", true, None::<&str>)?;
+
+    let pause_title = if is_paused {
+        "⏱️ تمديد أو تغيير مدة الاستراحة"
+    } else {
+        "⏸️ أخذ استراحة (إيقاف مؤقت)"
+    };
+    let pause_sub = Submenu::with_items(app, pause_title, true, &[&p30, &p60, &p120, &peod])?;
+    let sep_pause = PredefinedMenuItem::separator(app)?;
+
+    let status_item = MenuItem::with_id(
+        app,
+        "tray.pause_status",
+        "⏸️ التذكيرات موقوفة حالياً (استراحة)",
+        false,
+        None::<&str>,
+    )?;
+    let resume_item = MenuItem::with_id(
+        app,
+        ID_RESUME,
+        "▶️ استئناف التذكيرات الآن",
+        true,
+        None::<&str>,
+    )?;
+
     let q_label = MenuItem::with_id(
         app,
         "tray.q_label",
@@ -98,13 +167,34 @@ fn build_menu(
     let sep4 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, ID_QUIT, "إغلاق", true, None::<&str>)?;
 
-    Menu::with_items(
-        app,
-        &[
-            &header, &sep1, &q_label, &q_show, &q_hide, &sep2, &h_label, &h_show, &h_next,
-            &h_prev, &sep3, &settings, &sep4, &quit,
-        ],
-    )
+    let mut items: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = Vec::new();
+    items.push(&header);
+    items.push(&sep1);
+
+    if is_paused {
+        items.push(&status_item);
+        items.push(&resume_item);
+        items.push(&pause_sub);
+        items.push(&sep_pause);
+    } else {
+        items.push(&pause_sub);
+        items.push(&sep_pause);
+    }
+
+    items.push(&q_label);
+    items.push(&q_show);
+    items.push(&q_hide);
+    items.push(&sep2);
+    items.push(&h_label);
+    items.push(&h_show);
+    items.push(&h_next);
+    items.push(&h_prev);
+    items.push(&sep3);
+    items.push(&settings);
+    items.push(&sep4);
+    items.push(&quit);
+
+    Menu::with_items(app, &items)
 }
 
 /// Create the tray icon and install it into the app.
@@ -201,6 +291,26 @@ where
                 ID_OPEN_SETTINGS => {
                     log::info!("Tray: Open settings requested");
                     mh_settings(app.clone());
+                }
+                ID_RESUME => {
+                    log::info!("Tray: Resume requested");
+                    handle_pause(app, 0);
+                }
+                ID_PAUSE_30 => {
+                    log::info!("Tray: Pause 30m requested");
+                    handle_pause(app, chrono::Utc::now().timestamp_millis() + 30 * 60 * 1000);
+                }
+                ID_PAUSE_60 => {
+                    log::info!("Tray: Pause 60m requested");
+                    handle_pause(app, chrono::Utc::now().timestamp_millis() + 60 * 60 * 1000);
+                }
+                ID_PAUSE_120 => {
+                    log::info!("Tray: Pause 120m requested");
+                    handle_pause(app, chrono::Utc::now().timestamp_millis() + 120 * 60 * 1000);
+                }
+                ID_PAUSE_EOD => {
+                    log::info!("Tray: Pause EOD requested");
+                    handle_pause(app, calculate_eod_ts());
                 }
                 ID_QUIT => {
                     log::info!("Tray: Quit requested");

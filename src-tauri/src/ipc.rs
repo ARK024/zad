@@ -295,6 +295,9 @@ pub fn q_store_set(
                 windows::hide_quran_window(&app);
                 windows::destroy_widget(&app);
             }
+            if let Some(data) = app.try_state::<crate::data_loader::DataLoader>() {
+                crate::tray::refresh(&app, &store, &data);
+            }
         }
         broadcast_quran_changed(&app, &Value::Object(changed));
     }

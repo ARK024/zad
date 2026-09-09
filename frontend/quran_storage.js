@@ -533,5 +533,65 @@ const StorageManager = {
   async getAllMemorizedPages() {
     const [memorized, preloaded] = await Promise.all([this.getMemorizedPages(), this.getPreloadedPages()]);
     return [...new Set([...memorized, ...preloaded])].sort((a, b) => a - b);
+  },
+
+  async unmemorizePage(pageNumber) {
+    const targetPage = parseInt(pageNumber, 10);
+    if (!targetPage || targetPage < 1 || targetPage > 604) return false;
+
+    const today = this.getTodayDate();
+    const data = await window.api.invoke('q:store:get', [
+      'memorizedPages', 'recentReadings', 'totalReadCount', 'currentQuranPage'
+    ]);
+
+    const memorizedPages = (data.memorizedPages || []).filter(p => p !== targetPage);
+
+    let removed = false;
+    const recentReadings = (data.recentReadings || []).filter(r => {
+      if (!removed && r.page === targetPage && r.date === today) {
+        removed = true;
+        return false;
+      }
+      return true;
+    });
+
+    const totalReadCount = Math.max(0, (data.totalReadCount || 0) - 1);
+
+    const updates = {
+      memorizedPages,
+      recentReadings,
+      totalReadCount
+    };
+
+    if (data.currentQuranPage === targetPage + 1 || (data.currentQuranPage === 1 && targetPage === 604)) {
+      updates.currentQuranPage = targetPage;
+    }
+
+    await window.api.invoke('q:store:set', updates);
+    return true;
+  },
+
+  async undoLastMemorization() {
+    const data = await window.api.invoke('q:store:get', ['memorizedPages', 'currentQuranPage', 'recentReadings']);
+    const today = this.getTodayDate();
+
+    const todayReadings = (data.recentReadings || []).filter(r => r.date === today);
+    let pageToUndo = null;
+    if (todayReadings.length > 0) {
+      pageToUndo = todayReadings[todayReadings.length - 1].page;
+    } else if (data.memorizedPages && data.memorizedPages.length > 0) {
+      const prevPage = data.currentQuranPage > 1 ? data.currentQuranPage - 1 : 604;
+      if (data.memorizedPages.includes(prevPage)) {
+        pageToUndo = prevPage;
+      } else {
+        pageToUndo = data.memorizedPages[data.memorizedPages.length - 1];
+      }
+    }
+
+    if (!pageToUndo) return { success: false, msg: 'لا توجد صفحات محفوظة للتراجع عنها' };
+
+    await this.unmemorizePage(pageToUndo);
+    await window.api.invoke('q:store:set', { currentQuranPage: pageToUndo });
+    return { success: true, page: pageToUndo };
   }
 };

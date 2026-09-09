@@ -126,10 +126,10 @@
 .quran-widget-header {
   background: linear-gradient(135deg, var(--h-from), var(--h-to));
   color: #fff;
-  padding: 6px 12px 5px;
+  padding: 4px 10px 4px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   cursor: grab;
   user-select: none;
   flex-shrink: 0;
@@ -152,14 +152,43 @@
 .quran-widget-header-top {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+}
+
+.quran-widget-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quran-widget-header-btn {
+  background: rgba(255, 255, 255, .15);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #fff;
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  line-height: 1;
+  transition: background .15s ease, transform .15s ease;
+  flex-shrink: 0;
+}
+
+.quran-widget-header-btn:hover {
+  background: rgba(255, 255, 255, .32);
+  transform: scale(1.06);
 }
 
 .quran-widget-surah-name {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: bold;
-  letter-spacing: .3px;
+  letter-spacing: .2px;
 }
 
 .quran-widget-page-info {
@@ -170,18 +199,18 @@
 }
 
 .quran-widget-page-number {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
   opacity: 1;
 }
 
 .quran-widget-read-badge {
-  font-size: 11px;
+  font-size: 10.5px;
   background: rgba(255, 255, 255, .22);
-  border-radius: 20px;
-  padding: 2px 8px;
+  border-radius: 14px;
+  padding: 1px 6px;
   vertical-align: middle;
-  opacity: .9;
+  opacity: .92;
 }
 
 /* ─── Progress bar ─── */
@@ -190,7 +219,7 @@
 }
 
 .quran-widget-progress-bar-wrapper {
-  height: 3px;
+  height: 2.5px;
   background: rgba(255, 255, 255, .2);
   border-radius: 3px;
   overflow: hidden;
@@ -215,9 +244,9 @@
 .quran-widget-progress-row {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  color: rgba(255, 255, 255, .75);
-  margin-top: 4px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .8);
+  margin-top: 2px;
 }
 
 /* review stats row */
@@ -228,40 +257,52 @@
 .quran-widget-review-stats {
   display: flex;
   justify-content: space-between;
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, .8);
-  margin-bottom: 5px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .85);
+  margin-bottom: 3px;
 }
 
 .quran-widget-progress-text {
-  font-size: 11px;
-  color: rgba(255, 255, 255, .75);
-  margin-top: 4px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .8);
+  margin-top: 2px;
   text-align: center;
 }
 
-/* ─── Collapsed header ─── */
+/* ─── Collapsed header (Ultra-Slim) ─── */
 .quran-widget-header-collapsed {
   background: linear-gradient(135deg, var(--h-from), var(--h-to));
   color: #fff;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: bold;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
   user-select: none;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
+  min-height: 23px;
+  box-sizing: border-box;
+  transition: filter .15s ease;
 }
 
 .quran-widget-header-collapsed:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.12);
+}
+
+.quran-widget-header-collapsed.recent {
+  background: linear-gradient(135deg, var(--h-rec-from), var(--h-rec-to)) !important;
+}
+
+.quran-widget-header-collapsed.distant {
+  background: linear-gradient(135deg, var(--h-dist-from), var(--h-dist-to)) !important;
 }
 
 .quran-widget-header-collapsed .collapsed-page-num {
-  font-size: 20px;
+  font-size: 12.5px;
   font-weight: bold;
-  vertical-align: middle;
-  margin-right: 2px;
+  margin: 0 1px;
 }
 
 /* ─── Body ─── */

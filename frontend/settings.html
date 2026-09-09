@@ -118,6 +118,16 @@
               <button class="btn-sec sm" id="btnSetStartPage">تطبيق ▶</button>
             </div>
           </div>
+          <div class="field" style="background: rgba(0,0,0,0.03); padding: 9px 10px; border-radius: 8px; border: 1px dashed var(--border);">
+            <label style="color: var(--fg); font-weight: bold; margin-bottom: 6px;">تصحيح الحفظ والتراجع</label>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+              <button class="btn-sec sm" id="btnUndoLastMemorized" style="color: #b85c00; border-color: #b85c00; font-weight: bold;">↩ تراجع عن حفظ آخر صفحة</button>
+            </div>
+            <div class="jump-row">
+              <input type="number" id="quranUnmemorizePage" min="1" max="604" placeholder="رقم صفحة لإلغاء حفظها">
+              <button class="btn-sec sm danger" id="btnUnmemorizePage">إلغاء الحفظ ❌</button>
+            </div>
+          </div>
           <div class="field">
             <div class="tog-row" style="margin-top: 10px;">
               <span class="tog-lbl">تفعيل المراجعة البعيدة <span class="tog-desc">مراجعة الصفحات المحفوظة على فترات
@@ -321,6 +331,7 @@
   <div id="status" role="status" aria-live="polite"></div>
 
   <script src="tauri-shim.js"></script>
+  <script src="quran_storage.js"></script>
   <script src="settings.js"></script>
 </body>
 
