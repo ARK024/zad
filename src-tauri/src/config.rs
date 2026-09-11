@@ -158,6 +158,9 @@ pub struct QuranConfig {
     pub test_mode_enabled: Option<bool>,
     pub widget_shown_at: Option<i64>,
     pub weak_pages: Option<Vec<i64>>,
+    pub progressive_mode_enabled: Option<bool>,
+    pub progressive_level: Option<i64>,
+    pub progressive_chunk: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -644,6 +647,9 @@ impl ConfigStore {
                     q.weak_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                 }
             }
+            "progressiveModeEnabled" => q.progressive_mode_enabled = value.as_bool(),
+            "progressiveLevel" => q.progressive_level = value.as_i64(),
+            "progressiveChunk" => q.progressive_chunk = value.as_i64(),
             _ => log::warn!("Unknown quran config key: {}", key),
         }
     }
@@ -717,6 +723,9 @@ impl ConfigStore {
                             q.weak_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                         }
                     }
+                    "progressiveModeEnabled" => q.progressive_mode_enabled = v.as_bool(),
+                    "progressiveLevel" => q.progressive_level = v.as_i64(),
+                    "progressiveChunk" => q.progressive_chunk = v.as_i64(),
                     _ => log::warn!("Unknown quran config key in update: {}", k),
                 }
             }
@@ -762,6 +771,9 @@ impl ConfigStore {
             "testModeEnabled" => { q.test_mode_enabled = None; true }
             "widgetShownAt" => { q.widget_shown_at = None; true }
             "weakPages" => { q.weak_pages = None; true }
+            "progressiveModeEnabled" => { q.progressive_mode_enabled = None; true }
+            "progressiveLevel" => { q.progressive_level = None; true }
+            "progressiveChunk" => { q.progressive_chunk = None; true }
             _ => {
                 log::warn!("Unknown quran config key to remove: {}", key);
                 false
@@ -808,6 +820,9 @@ impl ConfigStore {
             "testModeEnabled".to_string(),
             "widgetShownAt".to_string(),
             "weakPages".to_string(),
+            "progressiveModeEnabled".to_string(),
+            "progressiveLevel".to_string(),
+            "progressiveChunk".to_string(),
         ];
         *q = QuranConfig::default();
         keys

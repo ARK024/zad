@@ -472,7 +472,7 @@ async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
     };
   }
 
-  await injectWidget(pageData.surahTitle, currentPage, pageData.ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize, hideHeader);
+  await injectWidget(pageData.surahTitle, currentPage, pageData.ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize, hideHeader, pageData.ayahs);
 }
 
 async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, widgetSize = 'medium', hideHeader = false) {
@@ -640,11 +640,130 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   });
 }
 
-async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize = 'medium', hideHeader = false) {
+function isAyahNumberOrSymbol(word) {
+  return /^[\s\uFD3E\uFD3F\u06DD\u06DE\u06DF\u06E0-\u06ED0-9\u0660-\u0669\(\)﴿﴾]+$/u.test(word);
+}
+
+function splitArabicWordHeadTail(word) {
+  if (isAyahNumberOrSymbol(word)) return { head: word, tail: '' };
+  const diacriticsRegex = /[\u064B-\u065F\u0670\u06D6-\u06ED]/;
+  let head = '';
+  let i = 0;
+  while (i < word.length && !word[i].match(/\p{L}/u)) {
+    head += word[i];
+    i++;
+  }
+  if (i < word.length) {
+    head += word[i];
+    i++;
+  }
+  while (i < word.length && diacriticsRegex.test(word[i])) {
+    head += word[i];
+    i++;
+  }
+  return { head: head || word, tail: word.slice(i) };
+}
+
+function createChunks(ayahs, fullText) {
+  const chunks = [{ id: 0, title: 'كامل الصفحة', text: fullText }];
+  if (!ayahs || ayahs.length === 0) return chunks;
+
+  if (ayahs.length >= 7) {
+    const c1 = Math.ceil(ayahs.length / 3);
+    const c2 = Math.ceil((ayahs.length * 2) / 3);
+    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs.slice(0, c1).join(' ') });
+    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs.slice(c1, c2).join(' ') });
+    chunks.push({ id: 3, title: 'مقطع ٣', text: ayahs.slice(c2).join(' ') });
+  } else if (ayahs.length >= 3) {
+    const mid = Math.ceil(ayahs.length / 2);
+    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs.slice(0, mid).join(' ') });
+    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs.slice(mid).join(' ') });
+  } else if (ayahs.length === 2) {
+    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs[0] });
+    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs[1] });
+  } else if (ayahs.length === 1) {
+    const words = ayahs[0].split(/\s+/);
+    if (words.length > 35) {
+      const parts = ayahs[0].split(/([ۚۖۗۘۙۜ])/);
+      if (parts.length >= 3) {
+        const midPoint = Math.floor(parts.length / 2);
+        chunks.push({ id: 1, title: 'مقطع ١', text: parts.slice(0, midPoint).join('').trim() });
+        chunks.push({ id: 2, title: 'مقطع ٢', text: parts.slice(midPoint).join('').trim() });
+      }
+    }
+  }
+  return chunks;
+}
+
+function renderAyahTextWithMasks(containerEl, text, level) {
+  if (!containerEl) return;
+  containerEl.innerHTML = '';
+  const words = text.split(/(\s+)/);
+  let wordIdx = 0;
+  const frag = document.createDocumentFragment();
+
+  for (const w of words) {
+    if (!w.trim()) {
+      frag.appendChild(document.createTextNode(w));
+      continue;
+    }
+    const isSymbol = isAyahNumberOrSymbol(w);
+    const span = document.createElement('span');
+    span.className = 'test-word';
+    span.dataset.idx = wordIdx;
+
+    const { head, tail } = splitArabicWordHeadTail(w);
+    const headSpan = document.createElement('span');
+    headSpan.className = 'head-text';
+    headSpan.textContent = head;
+
+    const tailSpan = document.createElement('span');
+    tailSpan.className = 'tail-text';
+    tailSpan.textContent = tail;
+
+    span.appendChild(headSpan);
+    if (tail) span.appendChild(tailSpan);
+
+    if (!isSymbol) {
+      if (level === 1 && wordIdx % 4 === 2) {
+        span.classList.add('masked-word');
+      } else if (level === 2 && wordIdx % 2 === 1) {
+        span.classList.add('masked-word');
+      } else if (level === 3) {
+        span.classList.add('keys-mode');
+      } else if (level === 4) {
+        span.classList.add('masked-word');
+      }
+      span.addEventListener('click', (e) => {
+        e.stopPropagation();
+        span.classList.toggle('revealed');
+      });
+      wordIdx++;
+    }
+
+    frag.appendChild(span);
+  }
+
+  containerEl.appendChild(frag);
+}
+
+async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize = 'medium', hideHeader = false, ayahs = []) {
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
-  const fontData = await window.api.invoke('q:store:get', { fontSizePx: 26 });
+  const config = await window.api.invoke('q:store:get', {
+    fontSizePx: 26,
+    progressiveModeEnabled: false,
+    progressiveLevel: 0,
+    progressiveChunk: 0
+  });
+
+  let progressiveModeOn = !!config.progressiveModeEnabled;
+  let currentLevel = Math.max(0, Math.min(4, config.progressiveLevel || 0));
+  let currentChunkIdx = config.progressiveChunk || 0;
+
+  const chunks = createChunks(ayahs, ayahTextHtml);
+  if (currentChunkIdx >= chunks.length) currentChunkIdx = 0;
 
   const widget = document.createElement('div');
   widget.id = 'quran-memorization-widget';
@@ -660,6 +779,9 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📖 سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
+          <button class="quran-widget-mode-btn${progressiveModeOn ? ' active' : ''}" id="quran-mode-toggle" title="التبديل بين وضع الحفظ العادي ووضع التدرج الذكي">
+            ${progressiveModeOn ? '🧩 متدرج' : '📖 عادي'}
+          </button>
           <span class="quran-widget-page-number">صفحة ${toArabicNumerals(pageNumber)}</span>
           <span class="quran-widget-read-badge">${readCountText}</span>
           <button class="quran-widget-header-btn" id="quran-header-collapse-btn" title="تصغير الهيدر">▲</button>
@@ -678,6 +800,28 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     <div class="quran-widget-header-collapsed" id="quran-header-toggle" title="توسيع الهيدر" style="${hideHeader ? 'display:flex;' : 'display:none;'}">
       <span>📖 سورة ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
       <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
+    </div>
+    <div class="quran-progressive-panel" id="quran-prog-panel" style="${progressiveModeOn ? '' : 'display:none;'}">
+      <div class="quran-prog-row">
+        <span style="font-weight:bold;color:var(--accent);">التلاشي:</span>
+        <div class="quran-prog-pills" id="quran-prog-levels">
+          <button class="quran-prog-pill${currentLevel === 0 ? ' active' : ''}" data-lvl="0">0% عادي</button>
+          <button class="quran-prog-pill${currentLevel === 1 ? ' active' : ''}" data-lvl="1">25% خفيف</button>
+          <button class="quran-prog-pill${currentLevel === 2 ? ' active' : ''}" data-lvl="2">50% متوسط</button>
+          <button class="quran-prog-pill${currentLevel === 3 ? ' active' : ''}" data-lvl="3">مفاتيح</button>
+          <button class="quran-prog-pill${currentLevel === 4 ? ' active' : ''}" data-lvl="4">100% غيباً</button>
+        </div>
+        <button class="quran-prog-btn-step" id="quran-prog-next-lvl" title="المستوى التالي">التالي ➡️</button>
+      </div>
+      ${chunks.length > 1 ? `
+      <div class="quran-prog-row" style="margin-top:2px;">
+        <span style="color:var(--muted);font-size:11px;">المقاطع:</span>
+        <div class="quran-prog-pills" id="quran-prog-chunks">
+          ${chunks.map((c, i) => `
+            <button class="quran-prog-pill${currentChunkIdx === i ? ' active' : ''}" data-chunk="${i}">${c.title}</button>
+          `).join('')}
+        </div>
+      </div>` : ''}
     </div>
   `;
 
@@ -698,7 +842,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   widget.innerHTML = `
     ${fullHeaderHtml}
     <div class="quran-widget-body">
-      ${ayahTextHtml}
+      <div class="quran-ayah-content" id="quran-ayah-container"></div>
       ${nextAyahHtml}
     </div>
     <div class="quran-widget-footer">
@@ -712,11 +856,27 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   `;
 
   // طبّق الخط قبل الإضافة للـ DOM
-  const fsPx = fontData.fontSizePx + 'px';
+  const fsPx = config.fontSizePx + 'px';
   const bodyEl = widget.querySelector('.quran-widget-body');
   if (bodyEl) bodyEl.style.fontSize = fsPx;
   const nextEl = widget.querySelector('.quran-widget-next-ayah-text');
   if (nextEl) nextEl.style.fontSize = fsPx;
+
+  const ayahContainerEl = widget.querySelector('#quran-ayah-container');
+
+  function updateProgressiveUI() {
+    widget.querySelectorAll('#quran-prog-levels .quran-prog-pill').forEach(p => {
+      p.classList.toggle('active', parseInt(p.dataset.lvl, 10) === currentLevel);
+    });
+    widget.querySelectorAll('#quran-prog-chunks .quran-prog-pill').forEach(p => {
+      p.classList.toggle('active', parseInt(p.dataset.chunk, 10) === currentChunkIdx);
+    });
+    const activeText = progressiveModeOn ? chunks[currentChunkIdx].text : ayahTextHtml;
+    const activeLvl = progressiveModeOn ? currentLevel : 0;
+    renderAyahTextWithMasks(ayahContainerEl, activeText, activeLvl);
+  }
+
+  updateProgressiveUI();
 
   document.body.appendChild(widget);
 
@@ -724,6 +884,58 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   const collapseBtn = document.getElementById('quran-header-collapse-btn');
   const headerEl = document.getElementById('quran-header-content');
   bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
+
+  // تبديل الوضع بين عادي ومتدرج
+  document.getElementById('quran-mode-toggle')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    progressiveModeOn = !progressiveModeOn;
+    const btn = document.getElementById('quran-mode-toggle');
+    const panel = document.getElementById('quran-prog-panel');
+    if (btn) {
+      btn.classList.toggle('active', progressiveModeOn);
+      btn.textContent = progressiveModeOn ? '🧩 متدرج' : '📖 عادي';
+    }
+    if (panel) {
+      panel.style.display = progressiveModeOn ? '' : 'none';
+    }
+    updateProgressiveUI();
+    await window.api.invoke('q:store:set', { progressiveModeEnabled: progressiveModeOn });
+  });
+
+  // اختيار مستوى التلاشي
+  widget.querySelectorAll('#quran-prog-levels .quran-prog-pill').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      currentLevel = parseInt(btn.dataset.lvl, 10) || 0;
+      updateProgressiveUI();
+      await window.api.invoke('q:store:set', { progressiveLevel: currentLevel });
+    });
+  });
+
+  // زر المستوى التالي
+  document.getElementById('quran-prog-next-lvl')?.addEventListener('click', async () => {
+    if (currentLevel < 4) {
+      currentLevel++;
+    } else if (chunks.length > 1 && currentChunkIdx < chunks.length - 1) {
+      currentChunkIdx++;
+      currentLevel = 0;
+    } else {
+      currentLevel = 0;
+    }
+    updateProgressiveUI();
+    await window.api.invoke('q:store:set', {
+      progressiveLevel: currentLevel,
+      progressiveChunk: currentChunkIdx
+    });
+  });
+
+  // اختيار المقطع
+  widget.querySelectorAll('#quran-prog-chunks .quran-prog-pill').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      currentChunkIdx = parseInt(btn.dataset.chunk, 10) || 0;
+      updateProgressiveUI();
+      await window.api.invoke('q:store:set', { progressiveChunk: currentChunkIdx });
+    });
+  });
 
   document.getElementById('quran-btn-hide')?.addEventListener('click', async () => {
     try {
@@ -766,7 +978,9 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       _dismissingWidget = true;
       await window.api.invoke('q:store:set', {
         currentQuranPage: nextPage,
-        lastCompletedTime: Date.now()
+        lastCompletedTime: Date.now(),
+        progressiveLevel: 0,
+        progressiveChunk: 0
       });
 
       document.getElementById('quran-btn-undo-action')?.addEventListener('click', async (e) => {

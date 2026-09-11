@@ -100,6 +100,7 @@ async function load() {
   gid('quranReviewDays').value = q.reviewDays || 7;
   gid('quranReviewPagesPerSession').value = q.reviewPagesPerSession || 10;
   gid('quranHideHeader').checked = !!q.hideHeader;
+  gid('quranProgressiveMode').checked = !!q.progressiveModeEnabled;
   gid('quranStartPage').value = q.currentQuranPage || 1;
 
   // Load Quran Stats
@@ -153,6 +154,7 @@ gid('btnSave').addEventListener('click', async () => {
     reviewPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
     recentPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
     hideHeader: gid('quranHideHeader').checked,
+    progressiveModeEnabled: gid('quranProgressiveMode').checked,
   };
 
   await window.api.invoke('q:store:set', qData);

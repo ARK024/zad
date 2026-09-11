@@ -21,6 +21,8 @@ pub struct PageAyahs {
     pub ayah_text_html: String,
     #[serde(rename = "firstAyahHtml")]
     pub first_ayah_html: String,
+    #[serde(rename = "ayahs", default)]
+    pub ayahs: Vec<String>,
 }
 
 #[derive(Default)]
@@ -270,7 +272,7 @@ impl DataLoader {
         }
         let surah_title = surah_names.join(" - ");
 
-        let ayah_text_html = indices
+        let ayahs: Vec<String> = indices
             .iter()
             .map(|&i| {
                 let a = &inner.quran[i];
@@ -280,24 +282,16 @@ impl DataLoader {
                     .map(|s| s.trim().to_string())
                     .unwrap_or_default()
             })
-            .collect::<Vec<_>>()
-            .join(" ");
+            .collect();
 
-        let first_ayah_html = indices
-            .first()
-            .and_then(|&i| {
-                let a = &inner.quran[i];
-                a.get("aya_text")
-                    .or_else(|| a.get("text"))
-                    .and_then(|v| v.as_str())
-            })
-            .map(|s| s.trim().to_string())
-            .unwrap_or_default();
+        let ayah_text_html = ayahs.join(" ");
+        let first_ayah_html = ayahs.first().cloned().unwrap_or_default();
 
         Some(PageAyahs {
             surah_title,
             ayah_text_html,
             first_ayah_html,
+            ayahs,
         })
     }
 

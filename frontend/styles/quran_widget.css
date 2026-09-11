@@ -556,3 +556,138 @@
   background: rgba(255, 255, 255, .45);
   border-color: rgba(255, 255, 255, .7);
 }
+
+/* ─── Progressive Mode Controls ─── */
+.quran-widget-mode-btn {
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 1px 7px;
+  cursor: pointer;
+  transition: all .15s ease;
+  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.quran-widget-mode-btn:hover {
+  background: rgba(255, 255, 255, .32);
+}
+
+.quran-widget-mode-btn.active {
+  background: #fff;
+  color: #157340;
+  border-color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+
+.quran-progressive-panel {
+  background: var(--footer-bg);
+  border-bottom: 1px solid var(--c-border);
+  padding: 5px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .quran-progressive-panel {
+    background: var(--footer-bg-dark);
+    border-bottom-color: var(--c-border-dark);
+  }
+}
+
+.quran-prog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.quran-prog-pills {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.quran-prog-pill {
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  cursor: pointer;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+
+.quran-prog-pill:hover {
+  border-color: var(--accent);
+}
+
+.quran-prog-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: bold;
+}
+
+.quran-prog-btn-step {
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  color: var(--c-text);
+  padding: 2px 7px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.quran-prog-btn-step:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Progressive Word Masking & Instant Peek ─── */
+.test-word.masked-word {
+  filter: blur(8px);
+  user-select: none;
+  cursor: pointer;
+  transition: filter .2s cubic-bezier(.4, 0, .2, 1), background-color .2s;
+  display: inline;
+  border-radius: 3px;
+}
+
+.test-word.masked-word:hover,
+.test-word.masked-word.revealed {
+  filter: none !important;
+  background-color: rgba(26, 152, 80, .14);
+}
+
+.test-word.keys-mode .tail-text {
+  filter: blur(7px);
+  transition: filter .2s ease;
+}
+
+.test-word.keys-mode .head-text {
+  font-weight: bold;
+  opacity: .95;
+}
+
+.test-word.keys-mode:hover .tail-text,
+.test-word.keys-mode.revealed .tail-text {
+  filter: none !important;
+}
