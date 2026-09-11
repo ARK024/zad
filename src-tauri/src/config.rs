@@ -375,49 +375,8 @@ impl ConfigStore {
             // Fallback to Value parsing
             log::warn!("QuranConfig not strongly-typed, falling back to Value parsing");
             if let Ok(parsed_value) = serde_json::from_str::<Value>(&raw) {
-                if let Some(obj) = parsed_value.as_object() {
-                    let mut q = self.quran.lock();
-                    if let Some(v) = obj.get("currentQuranPage").and_then(|v| v.as_i64()) {
-                        q.current_quran_page = Some(v);
-                    }
-                    if let Some(v) = obj.get("dailyGoal").and_then(|v| v.as_i64()) {
-                        q.daily_goal = Some(v);
-                    }
-                    if let Some(v) = obj.get("memorizationInterval").and_then(|v| v.as_i64()) {
-                        q.memorization_interval = Some(v);
-                    }
-                    if let Some(v) = obj.get("reviewIndex").and_then(|v| v.as_i64()) {
-                        q.review_index = Some(v);
-                    }
-                    if let Some(v) = obj.get("recentReviewIndex").and_then(|v| v.as_i64()) {
-                        q.recent_review_index = Some(v);
-                    }
-                    if let Some(v) = obj.get("pausedUntil").and_then(|v| v.as_i64()) {
-                        q.paused_until = Some(v);
-                    }
-                    if let Some(v) = obj.get("widgetX").and_then(|v| v.as_f64()) {
-                        q.widget_x = Some(v);
-                    }
-                    if let Some(v) = obj.get("widgetY").and_then(|v| v.as_f64()) {
-                        q.widget_y = Some(v);
-                    }
-                    if let Some(v) = obj.get("widgetCustomWidth").and_then(|v| v.as_f64()) {
-                        q.widget_custom_width = Some(v);
-                    }
-                    if let Some(v) = obj.get("widgetCustomHeight").and_then(|v| v.as_f64()) {
-                        q.widget_custom_height = Some(v);
-                    }
-                    if let Some(v) = obj.get("recentReadings").and_then(|v| v.as_array()) {
-                        q.recent_readings = Some(
-                            v.iter()
-                                .filter_map(|r| {
-                                    serde_json::from_value::<ReadingEntry>(r.clone()).ok()
-                                })
-                                .collect()
-                        );
-                    }
-                    log::info!("Loaded QuranConfig with {} custom values", obj.len());
-                }
+                self.quran_update(&parsed_value);
+                log::info!("Loaded QuranConfig via fallback update");
             } else {
                 log::error!("Failed to parse quran config file as JSON: {}", path.display());
             }

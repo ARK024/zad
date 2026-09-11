@@ -88,6 +88,7 @@ async function load() {
     reviewDays: 7,
     reviewPagesPerSession: 10,
     hideHeader: false,
+    progressiveModeEnabled: false,
     currentQuranPage: 1,
   });
   gid('quranDailyGoal').value = q.dailyGoal;
@@ -125,6 +126,16 @@ gid('quranFontSize').addEventListener('input', () => {
 
 gid('chkDark').addEventListener('change', () => {
   document.body.classList.toggle('dark', gid('chkDark').checked);
+});
+
+gid('quranProgressiveMode')?.addEventListener('change', async () => {
+  try {
+    await window.api.invoke('q:store:set', {
+      progressiveModeEnabled: gid('quranProgressiveMode').checked
+    });
+  } catch (e) {
+    console.warn('Failed to auto-save progressiveModeEnabled', e);
+  }
 });
 
 // Save All
