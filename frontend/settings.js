@@ -138,6 +138,16 @@ gid('quranProgressiveMode')?.addEventListener('change', async () => {
   }
 });
 
+gid('quranHideHeader')?.addEventListener('change', async () => {
+  try {
+    await window.api.invoke('q:store:set', {
+      hideHeader: gid('quranHideHeader').checked
+    });
+  } catch (e) {
+    console.warn('Failed to auto-save hideHeader', e);
+  }
+});
+
 // Save All
 gid('btnSave').addEventListener('click', async () => {
   let interval;

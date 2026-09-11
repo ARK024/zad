@@ -208,6 +208,16 @@ fn q_store_path(app: &AppHandle) -> anyhow::Result<PathBuf> {
     Ok(dir.join("quran_store.json"))
 }
 
+fn to_bool(v: &Value) -> Option<bool> {
+    v.as_bool()
+        .or_else(|| match v.as_str() {
+            Some("true") | Some("1") => Some(true),
+            Some("false") | Some("0") => Some(false),
+            _ => None,
+        })
+        .or_else(|| v.as_i64().map(|n| n != 0))
+}
+
 /// Thread-safe wrapper around the two JSON config blobs.
 #[derive(Clone)]
 pub struct ConfigStore {
@@ -563,11 +573,11 @@ impl ConfigStore {
             }
             "widgetSize" => q.widget_size = value.as_str().map(|s| s.to_string()),
             "fontSizePx" => q.font_size_px = value.as_i64(),
-            "reviewEnabled" => q.review_enabled = value.as_bool(),
-            "recentReviewEnabled" => q.recent_review_enabled = value.as_bool(),
+            "reviewEnabled" => q.review_enabled = to_bool(&value),
+            "recentReviewEnabled" => q.recent_review_enabled = to_bool(&value),
             "reviewDays" => q.review_days = value.as_i64(),
             "reviewPagesPerSession" => q.review_pages_per_session = value.as_i64(),
-            "hideHeader" => q.hide_header = value.as_bool(),
+            "hideHeader" => q.hide_header = to_bool(&value),
             "memorizedPages" => {
                 if let Some(arr) = value.as_array() {
                     q.memorized_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
@@ -599,14 +609,14 @@ impl ConfigStore {
                     q.recent_retry_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                 }
             }
-            "testModeEnabled" => q.test_mode_enabled = value.as_bool(),
+            "testModeEnabled" => q.test_mode_enabled = to_bool(&value),
             "widgetShownAt" => q.widget_shown_at = value.as_i64(),
             "weakPages" => {
                 if let Some(arr) = value.as_array() {
                     q.weak_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                 }
             }
-            "progressiveModeEnabled" => q.progressive_mode_enabled = value.as_bool(),
+            "progressiveModeEnabled" => q.progressive_mode_enabled = to_bool(&value),
             "progressiveLevel" => q.progressive_level = value.as_i64(),
             "progressiveChunk" => q.progressive_chunk = value.as_i64(),
             _ => log::warn!("Unknown quran config key: {}", key),
@@ -639,11 +649,11 @@ impl ConfigStore {
                     }
                     "widgetSize" => q.widget_size = v.as_str().map(|s| s.to_string()),
                     "fontSizePx" => q.font_size_px = v.as_i64(),
-                    "reviewEnabled" => q.review_enabled = v.as_bool(),
-                    "recentReviewEnabled" => q.recent_review_enabled = v.as_bool(),
+                    "reviewEnabled" => q.review_enabled = to_bool(v),
+                    "recentReviewEnabled" => q.recent_review_enabled = to_bool(v),
                     "reviewDays" => q.review_days = v.as_i64(),
                     "reviewPagesPerSession" => q.review_pages_per_session = v.as_i64(),
-                    "hideHeader" => q.hide_header = v.as_bool(),
+                    "hideHeader" => q.hide_header = to_bool(v),
                     "memorizedPages" => {
                         if let Some(arr) = v.as_array() {
                             q.memorized_pages = Some(arr.iter().filter_map(|x| x.as_i64()).collect());
@@ -675,14 +685,14 @@ impl ConfigStore {
                             q.recent_retry_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                         }
                     }
-                    "testModeEnabled" => q.test_mode_enabled = v.as_bool(),
+                    "testModeEnabled" => q.test_mode_enabled = to_bool(v),
                     "widgetShownAt" => q.widget_shown_at = v.as_i64(),
                     "weakPages" => {
                         if let Some(arr) = v.as_array() {
                             q.weak_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
                         }
                     }
-                    "progressiveModeEnabled" => q.progressive_mode_enabled = v.as_bool(),
+                    "progressiveModeEnabled" => q.progressive_mode_enabled = to_bool(v),
                     "progressiveLevel" => q.progressive_level = v.as_i64(),
                     "progressiveChunk" => q.progressive_chunk = v.as_i64(),
                     _ => log::warn!("Unknown quran config key in update: {}", k),
@@ -694,45 +704,45 @@ impl ConfigStore {
     pub fn quran_remove(&self, key: &str) -> bool {
         let mut q = self.quran.lock();
         match key {
-            "currentQuranPage" => { q.current_quran_page = None; true }
-            "dailyGoal" => { q.daily_goal = None; true }
-            "memorizationInterval" => { q.memorization_interval = None; true }
-            "reviewIndex" => { q.review_index = None; true }
-            "recentReviewIndex" => { q.recent_review_index = None; true }
-            "pausedUntil" => { q.paused_until = None; true }
-            "widgetX" => { q.widget_x = None; true }
-            "widgetY" => { q.widget_y = None; true }
-            "widgetCustomWidth" => { q.widget_custom_width = None; true }
-            "widgetCustomHeight" => { q.widget_custom_height = None; true }
-            "recentReadings" => { q.recent_readings = None; true }
-            "widgetSize" => { q.widget_size = None; true }
-            "fontSizePx" => { q.font_size_px = None; true }
-            "reviewEnabled" => { q.review_enabled = None; true }
-            "recentReviewEnabled" => { q.recent_review_enabled = None; true }
-            "reviewDays" => { q.review_days = None; true }
-            "reviewPagesPerSession" => { q.review_pages_per_session = None; true }
-            "hideHeader" => { q.hide_header = None; true }
-            "memorizedPages" => { q.memorized_pages = None; true }
-            "preloadedPages" => { q.preloaded_pages = None; true }
-            "dailyStreak" => { q.daily_streak = None; true }
-            "lastCompletedDate" => { q.last_completed_date = None; true }
-            "lastCompletedTime" => { q.last_completed_time = None; true }
-            "totalReadCount" => { q.total_read_count = None; true }
-            "completedPages" => { q.completed_pages = None; true }
-            "recentPagesPerSession" => { q.recent_pages_per_session = None; true }
-            "dayStartHour" => { q.day_start_hour = None; true }
-            "lastReviewDate" => { q.last_review_date = None; true }
-            "reviewCycleStartDate" => { q.review_cycle_start_date = None; true }
-            "reviewSessionStart" => { q.review_session_start = None; true }
-            "reviewRetryPages" => { q.review_retry_pages = None; true }
-            "lastRecentReviewDate" => { q.last_recent_review_date = None; true }
-            "recentRetryPages" => { q.recent_retry_pages = None; true }
-            "testModeEnabled" => { q.test_mode_enabled = None; true }
-            "widgetShownAt" => { q.widget_shown_at = None; true }
-            "weakPages" => { q.weak_pages = None; true }
-            "progressiveModeEnabled" => { q.progressive_mode_enabled = None; true }
-            "progressiveLevel" => { q.progressive_level = None; true }
-            "progressiveChunk" => { q.progressive_chunk = None; true }
+            "currentQuranPage" => q.current_quran_page.take().is_some(),
+            "dailyGoal" => q.daily_goal.take().is_some(),
+            "memorizationInterval" => q.memorization_interval.take().is_some(),
+            "reviewIndex" => q.review_index.take().is_some(),
+            "recentReviewIndex" => q.recent_review_index.take().is_some(),
+            "pausedUntil" => q.paused_until.take().is_some(),
+            "widgetX" => q.widget_x.take().is_some(),
+            "widgetY" => q.widget_y.take().is_some(),
+            "widgetCustomWidth" => q.widget_custom_width.take().is_some(),
+            "widgetCustomHeight" => q.widget_custom_height.take().is_some(),
+            "recentReadings" => q.recent_readings.take().is_some(),
+            "widgetSize" => q.widget_size.take().is_some(),
+            "fontSizePx" => q.font_size_px.take().is_some(),
+            "reviewEnabled" => q.review_enabled.take().is_some(),
+            "recentReviewEnabled" => q.recent_review_enabled.take().is_some(),
+            "reviewDays" => q.review_days.take().is_some(),
+            "reviewPagesPerSession" => q.review_pages_per_session.take().is_some(),
+            "hideHeader" => q.hide_header.take().is_some(),
+            "memorizedPages" => q.memorized_pages.take().is_some(),
+            "preloadedPages" => q.preloaded_pages.take().is_some(),
+            "dailyStreak" => q.daily_streak.take().is_some(),
+            "lastCompletedDate" => q.last_completed_date.take().is_some(),
+            "lastCompletedTime" => q.last_completed_time.take().is_some(),
+            "totalReadCount" => q.total_read_count.take().is_some(),
+            "completedPages" => q.completed_pages.take().is_some(),
+            "recentPagesPerSession" => q.recent_pages_per_session.take().is_some(),
+            "dayStartHour" => q.day_start_hour.take().is_some(),
+            "lastReviewDate" => q.last_review_date.take().is_some(),
+            "reviewCycleStartDate" => q.review_cycle_start_date.take().is_some(),
+            "reviewSessionStart" => q.review_session_start.take().is_some(),
+            "reviewRetryPages" => q.review_retry_pages.take().is_some(),
+            "lastRecentReviewDate" => q.last_recent_review_date.take().is_some(),
+            "recentRetryPages" => q.recent_retry_pages.take().is_some(),
+            "testModeEnabled" => q.test_mode_enabled.take().is_some(),
+            "widgetShownAt" => q.widget_shown_at.take().is_some(),
+            "weakPages" => q.weak_pages.take().is_some(),
+            "progressiveModeEnabled" => q.progressive_mode_enabled.take().is_some(),
+            "progressiveLevel" => q.progressive_level.take().is_some(),
+            "progressiveChunk" => q.progressive_chunk.take().is_some(),
             _ => {
                 log::warn!("Unknown quran config key to remove: {}", key);
                 false
@@ -821,11 +831,22 @@ mod tests {
     #[test]
     fn quran_remove_and_clear() {
         let s = ConfigStore::new();
-        s.quran_update(&json!({"a": 1, "b": 2}));
-        assert!(s.quran_remove("a"));
-        assert!(!s.quran_remove("a"));
+        s.quran_update(&json!({"fontSizePx": 24, "dailyGoal": 2}));
+        assert!(s.quran_remove("fontSizePx"));
+        assert!(!s.quran_remove("fontSizePx"));
         let cleared = s.quran_clear();
-        assert!(cleared.contains(&"b".to_string()));
-        assert!(s.quran_get().as_object().unwrap().is_empty());
+        assert!(cleared.contains(&"dailyGoal".to_string()));
+        assert!(s.quran_get().as_object().unwrap().values().all(|v| v.is_null()));
+    }
+
+    #[test]
+    fn quran_hide_header_persistence() {
+        let s = ConfigStore::new();
+        s.quran_set("hideHeader", json!(true));
+        assert_eq!(s.quran_get().get("hideHeader").unwrap(), &json!(true));
+        let snapshot = s.quran.lock().clone();
+        let serialized = serde_json::to_string(&snapshot).unwrap();
+        let deserialized: QuranConfig = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.hide_header, Some(true));
     }
 }

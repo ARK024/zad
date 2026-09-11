@@ -111,7 +111,8 @@ async function getMultiplePagesFromBG(pageNumbers) {
 }
 
 function bindHeaderToggle(toggleBtn, collapseBtn, headerEl) {
-  toggleBtn?.addEventListener('click', async () => {
+  toggleBtn?.addEventListener('click', async (e) => {
+    e.stopPropagation();
     if (headerEl) headerEl.style.display = 'flex';
     if (toggleBtn) toggleBtn.style.display = 'none';
     try {
@@ -179,8 +180,9 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
-  const fontData = await window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false });
+  const fontData = await window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false, hideHeader: false });
   const testModeOn = fontData.testModeEnabled || false;
+  const isHeaderHidden = fontData.hideHeader !== undefined ? !!fontData.hideHeader : !!hideHeader;
 
   const widget = document.createElement('div');
   widget.id = 'quran-memorization-widget';
@@ -198,7 +200,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const testBtnHtml = `<button class="quran-widget-test-btn${testModeOn ? ' active' : ''}" id="quran-test-toggle" title="وضع الاختبار">👁️</button>`;
 
   const fullHeader = `
-    <div class="quran-widget-header quran-widget-recent-header" id="quran-recent-header-content" style="${hideHeader ? 'display:none;' : 'display:flex;'}">
+    <div class="quran-widget-header quran-widget-recent-header" id="quran-recent-header-content" style="${isHeaderHidden ? 'display:none;' : 'display:flex;'}">
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">⚡ قريب - سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
@@ -220,7 +222,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
         </div>
       </div>
     </div>
-    <div class="quran-widget-header-collapsed recent" id="quran-header-toggle" title="توسيع الهيدر" style="${hideHeader ? 'display:flex;' : 'display:none;'}">
+    <div class="quran-widget-header-collapsed recent" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
       <span>⚡ ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
       <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -270,9 +272,9 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
     await window.api.invoke('q:store:set', { testModeEnabled: isActive });
   });
 
-  const toggleBtn = document.getElementById('quran-header-toggle');
-  const collapseBtn = document.getElementById('quran-header-collapse-btn');
-  const headerEl = document.getElementById('quran-recent-header-content');
+  const toggleBtn = widget.querySelector('#quran-header-toggle');
+  const collapseBtn = widget.querySelector('#quran-header-collapse-btn');
+  const headerEl = widget.querySelector('#quran-recent-header-content');
   bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
 
   document.getElementById('quran-btn-recent-skip')?.addEventListener('click', async () => {
@@ -479,8 +481,9 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
-  const _reviewFontData = await window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false });
+  const _reviewFontData = await window.api.invoke('q:store:get', { fontSizePx: 26, testModeEnabled: false, hideHeader: false });
   const testModeOn = _reviewFontData.testModeEnabled || false;
+  const isHeaderHidden = _reviewFontData.hideHeader !== undefined ? !!_reviewFontData.hideHeader : !!hideHeader;
 
   const widget = document.createElement('div');
   widget.id = 'quran-memorization-widget';
@@ -498,7 +501,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const testBtnHtml = `<button class="quran-widget-test-btn${testModeOn ? ' active' : ''}" id="quran-test-toggle" title="وضع الاختبار">👁️</button>`;
 
   const fullHeader = `
-    <div class="quran-widget-header quran-widget-distant-header" id="quran-review-header-content" style="${hideHeader ? 'display:none;' : 'display:flex;'}">
+    <div class="quran-widget-header quran-widget-distant-header" id="quran-review-header-content" style="${isHeaderHidden ? 'display:none;' : 'display:flex;'}">
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📅 بعيد - سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
@@ -520,7 +523,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
         </div>
       </div>
     </div>
-    <div class="quran-widget-header-collapsed distant" id="quran-review-toggle" title="توسيع الهيدر" style="${hideHeader ? 'display:flex;' : 'display:none;'}">
+    <div class="quran-widget-header-collapsed distant" id="quran-review-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
       <span>🔄 ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
       <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -574,9 +577,9 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
     await window.api.invoke('q:store:set', { testModeEnabled: isActive });
   });
 
-  const revToggleBtn = document.getElementById('quran-review-toggle');
-  const revCollapseBtn = document.getElementById('quran-review-collapse-btn');
-  const revHeaderEl = document.getElementById('quran-review-header-content');
+  const revToggleBtn = widget.querySelector('#quran-review-toggle');
+  const revCollapseBtn = widget.querySelector('#quran-review-collapse-btn');
+  const revHeaderEl = widget.querySelector('#quran-review-header-content');
   bindHeaderToggle(revToggleBtn, revCollapseBtn, revHeaderEl);
 
   document.getElementById('quran-btn-skip')?.addEventListener('click', async () => {
@@ -755,9 +758,11 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     fontSizePx: 26,
     progressiveModeEnabled: false,
     progressiveLevel: 0,
-    progressiveChunk: 0
+    progressiveChunk: 0,
+    hideHeader: false
   });
 
+  const isHeaderHidden = config.hideHeader !== undefined ? !!config.hideHeader : !!hideHeader;
   let progressiveModeOn = !!config.progressiveModeEnabled;
   let currentLevel = Math.max(0, Math.min(4, config.progressiveLevel || 0));
   let currentChunkIdx = config.progressiveChunk || 0;
@@ -775,7 +780,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       : 'جديدة';
 
   const fullHeaderHtml = `
-    <div class="quran-widget-header" id="quran-header-content" style="${hideHeader ? 'display:none;' : 'display:flex;'}">
+    <div class="quran-widget-header" id="quran-header-content" style="${isHeaderHidden ? 'display:none;' : 'display:flex;'}">
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📖 سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
@@ -797,7 +802,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
         </div>
       </div>
     </div>
-    <div class="quran-widget-header-collapsed" id="quran-header-toggle" title="توسيع الهيدر" style="${hideHeader ? 'display:flex;' : 'display:none;'}">
+    <div class="quran-widget-header-collapsed" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
       <span>📖 سورة ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
       <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -880,9 +885,9 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
 
   document.body.appendChild(widget);
 
-  const toggleBtn = document.getElementById('quran-header-toggle');
-  const collapseBtn = document.getElementById('quran-header-collapse-btn');
-  const headerEl = document.getElementById('quran-header-content');
+  const toggleBtn = widget.querySelector('#quran-header-toggle');
+  const collapseBtn = widget.querySelector('#quran-header-collapse-btn');
+  const headerEl = widget.querySelector('#quran-header-content');
   bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
 
   // تبديل الوضع بين عادي ومتدرج
@@ -1030,6 +1035,20 @@ window.api.receive('q:store:changed', (changes) => {
       if (widget) {
         widget.classList.add('hiding');
         setTimeout(() => cleanupWidget(widget), 300);
+      }
+    }
+
+    if (changes.hideHeader !== undefined) {
+      const val = changes.hideHeader && changes.hideHeader.newValue !== undefined
+        ? changes.hideHeader.newValue
+        : changes.hideHeader;
+      const isHidden = !!val;
+      const widget = document.getElementById('quran-memorization-widget');
+      if (widget) {
+        const headerEl = widget.querySelector('#quran-header-content, #quran-recent-header-content, #quran-review-header-content');
+        const toggleBtn = widget.querySelector('#quran-header-toggle, #quran-review-toggle');
+        if (headerEl) headerEl.style.display = isHidden ? 'none' : 'flex';
+        if (toggleBtn) toggleBtn.style.display = isHidden ? 'flex' : 'none';
       }
     }
   } catch (e) {
