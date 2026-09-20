@@ -452,9 +452,7 @@ if (window.api && window.api.receive) {
     }
     if (changes.hideHeader !== undefined) {
       const chk = document.getElementById('quranHideHeader');
-      const val = changes.hideHeader && changes.hideHeader.newValue !== undefined
-        ? changes.hideHeader.newValue
-        : changes.hideHeader;
+      const val = (changes.hideHeader && typeof changes.hideHeader === 'object' && changes.hideHeader.newValue !== undefined) ? changes.hideHeader.newValue : changes.hideHeader;
       if (chk) chk.checked = !!val;
     }
   });

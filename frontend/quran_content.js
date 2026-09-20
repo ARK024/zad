@@ -1082,9 +1082,7 @@ window.api.receive('q:store:changed', (changes) => {
     }
 
     if (changes.hideHeader !== undefined) {
-      const val = changes.hideHeader && changes.hideHeader.newValue !== undefined
-        ? changes.hideHeader.newValue
-        : changes.hideHeader;
+      const val = (changes.hideHeader && typeof changes.hideHeader === 'object' && changes.hideHeader.newValue !== undefined) ? changes.hideHeader.newValue : changes.hideHeader;
       const isHidden = !!val;
       const widget = document.getElementById('quran-memorization-widget');
       if (widget) {
