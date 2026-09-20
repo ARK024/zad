@@ -163,14 +163,12 @@ async function showRecentReviewPage(recentData, widgetSize, hideHeader, _attempt
   }
 
   // الصفحة التالية للمعاينة
-  const nextIdx = recentData.currentIndex + sessionPages.length;
+  const lastSessionPageNum = sessionPages[sessionPages.length - 1].pageNum;
+  const nextPageNum = lastSessionPageNum >= 604 ? 1 : lastSessionPageNum + 1;
   let nextPagePreview = null;
-  if (nextIdx < recentData.pages.length) {
-    const nextPageNum = recentData.pages[nextIdx];
-    const nextPd = await getPageAyahsFromBG(nextPageNum);
-    if (nextPd) {
-      nextPagePreview = { pageNum: nextPageNum, surahTitle: nextPd.surahTitle, firstAyahHtml: nextPd.firstAyahHtml || '' };
-    }
+  const nextPd = await getPageAyahsFromBG(nextPageNum);
+  if (nextPd) {
+    nextPagePreview = { pageNum: nextPageNum, surahTitle: nextPd.surahTitle, firstAyahHtml: nextPd.firstAyahHtml || '' };
   }
 
   await injectRecentReviewWidget(sessionPages, recentData, nextPagePreview, widgetSize, hideHeader);
@@ -418,14 +416,12 @@ async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0)
   }
 
   // الصفحة التالية للمعاينة
-  const nextIdx = reviewData.currentIndex + sessionPages.length;
+  const lastSessionPageNum = sessionPages[sessionPages.length - 1].pageNum;
+  const nextPageNum = lastSessionPageNum >= 604 ? 1 : lastSessionPageNum + 1;
   let nextPagePreview = null;
-  if (nextIdx < reviewData.pages.length) {
-    const nextPageNum = reviewData.pages[nextIdx];
-    const nextPd = await getPageAyahsFromBG(nextPageNum);
-    if (nextPd) {
-      nextPagePreview = { pageNum: nextPageNum, surahTitle: nextPd.surahTitle, firstAyahHtml: nextPd.firstAyahHtml || '' };
-    }
+  const nextPd = await getPageAyahsFromBG(nextPageNum);
+  if (nextPd) {
+    nextPagePreview = { pageNum: nextPageNum, surahTitle: nextPd.surahTitle, firstAyahHtml: nextPd.firstAyahHtml || '' };
   }
 
   await injectReviewWidget(sessionPages, reviewData, nextPagePreview, widgetSize, hideHeader);
@@ -671,30 +667,77 @@ function createChunks(ayahs, fullText) {
   const chunks = [{ id: 0, title: 'كامل الصفحة', text: fullText }];
   if (!ayahs || ayahs.length === 0) return chunks;
 
-  if (ayahs.length >= 7) {
-    const c1 = Math.ceil(ayahs.length / 3);
-    const c2 = Math.ceil((ayahs.length * 2) / 3);
-    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs.slice(0, c1).join(' ') });
-    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs.slice(c1, c2).join(' ') });
-    chunks.push({ id: 3, title: 'مقطع ٣', text: ayahs.slice(c2).join(' ') });
-  } else if (ayahs.length >= 3) {
-    const mid = Math.ceil(ayahs.length / 2);
-    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs.slice(0, mid).join(' ') });
-    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs.slice(mid).join(' ') });
-  } else if (ayahs.length === 2) {
-    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs[0] });
-    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs[1] });
-  } else if (ayahs.length === 1) {
+  const totalLen = ayahs.reduce((sum, a) => sum + a.length, 0);
+
+  if (ayahs.length === 1) {
     const words = ayahs[0].split(/\s+/);
     if (words.length > 35) {
       const parts = ayahs[0].split(/([ۚۖۗۘۙۜ])/);
       if (parts.length >= 3) {
-        const midPoint = Math.floor(parts.length / 2);
+        const targetLen = totalLen / 2;
+        let midPoint = 1;
+        let runningLen = 0;
+        for (let i = 0; i < parts.length; i += 2) {
+          runningLen += parts[i].length;
+          if (runningLen >= targetLen && i > 0) {
+            midPoint = i + 1;
+            break;
+          }
+        }
+        if (midPoint >= parts.length) midPoint = parts.length - 2;
         chunks.push({ id: 1, title: 'مقطع ١', text: parts.slice(0, midPoint).join('').trim() });
         chunks.push({ id: 2, title: 'مقطع ٢', text: parts.slice(midPoint).join('').trim() });
+      } else {
+        const mid = Math.ceil(words.length / 2);
+        chunks.push({ id: 1, title: 'مقطع ١', text: words.slice(0, mid).join(' ') });
+        chunks.push({ id: 2, title: 'مقطع ٢', text: words.slice(mid).join(' ') });
       }
     }
+    return chunks;
   }
+
+  let numChunks = 2;
+  if (totalLen > 300 && ayahs.length >= 3) numChunks = 3;
+  if (ayahs.length >= 7) numChunks = 3;
+
+  if (numChunks === 3 && ayahs.length >= 3) {
+    let bestVariance = Infinity;
+    let bestI = 1, bestJ = 2;
+    for (let i = 1; i < ayahs.length; i++) {
+      for (let j = i + 1; j < ayahs.length; j++) {
+        const len1 = ayahs.slice(0, i).reduce((s, a) => s + a.length, 0);
+        const len2 = ayahs.slice(i, j).reduce((s, a) => s + a.length, 0);
+        const len3 = ayahs.slice(j).reduce((s, a) => s + a.length, 0);
+        
+        const mean = (len1 + len2 + len3) / 3;
+        const variance = Math.pow(len1 - mean, 2) + Math.pow(len2 - mean, 2) + Math.pow(len3 - mean, 2);
+        
+        if (variance < bestVariance) {
+          bestVariance = variance;
+          bestI = i;
+          bestJ = j;
+        }
+      }
+    }
+    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs.slice(0, bestI).join(' ') });
+    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs.slice(bestI, bestJ).join(' ') });
+    chunks.push({ id: 3, title: 'مقطع ٣', text: ayahs.slice(bestJ).join(' ') });
+  } else {
+    let bestDiff = Infinity;
+    let bestI = 1;
+    for (let i = 1; i < ayahs.length; i++) {
+        const len1 = ayahs.slice(0, i).reduce((s, a) => s + a.length, 0);
+        const len2 = ayahs.slice(i).reduce((s, a) => s + a.length, 0);
+        const diff = Math.abs(len1 - len2);
+        if (diff < bestDiff) {
+            bestDiff = diff;
+            bestI = i;
+        }
+    }
+    chunks.push({ id: 1, title: 'مقطع ١', text: ayahs.slice(0, bestI).join(' ') });
+    chunks.push({ id: 2, title: 'مقطع ٢', text: ayahs.slice(bestI).join(' ') });
+  }
+
   return chunks;
 }
 

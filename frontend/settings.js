@@ -440,3 +440,22 @@ setInterval(refreshPauseUI, 30000);
 refreshPauseUI();
 
 load();
+
+if (window.api && window.api.receive) {
+  window.api.receive('q:store:changed', (changes) => {
+    if (changes.progressiveModeEnabled !== undefined) {
+      const chk = document.getElementById('quranProgressiveMode');
+      const val = changes.progressiveModeEnabled && changes.progressiveModeEnabled.newValue !== undefined
+        ? changes.progressiveModeEnabled.newValue
+        : changes.progressiveModeEnabled;
+      if (chk) chk.checked = !!val;
+    }
+    if (changes.hideHeader !== undefined) {
+      const chk = document.getElementById('quranHideHeader');
+      const val = changes.hideHeader && changes.hideHeader.newValue !== undefined
+        ? changes.hideHeader.newValue
+        : changes.hideHeader;
+      if (chk) chk.checked = !!val;
+    }
+  });
+}
