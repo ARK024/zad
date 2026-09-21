@@ -13,6 +13,13 @@ pub struct SearchHit {
     pub chapter: String,
 }
 
+#[derive(Debug, Clone, Serialize, serde::Deserialize, Default)]
+pub struct AyahDetail {
+    pub surah: i64,
+    pub ayah: i64,
+    pub text: String,
+}
+
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct PageAyahs {
     #[serde(rename = "surahTitle")]
@@ -23,6 +30,8 @@ pub struct PageAyahs {
     pub first_ayah_html: String,
     #[serde(rename = "ayahs", default)]
     pub ayahs: Vec<String>,
+    #[serde(rename = "ayahDetails", default)]
+    pub ayah_details: Vec<AyahDetail>,
 }
 
 #[derive(Default)]
@@ -272,17 +281,20 @@ impl DataLoader {
         }
         let surah_title = surah_names.join(" - ");
 
-        let ayahs: Vec<String> = indices
-            .iter()
-            .map(|&i| {
-                let a = &inner.quran[i];
-                a.get("aya_text")
-                    .or_else(|| a.get("text"))
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_default()
-            })
-            .collect();
+        let mut ayahs: Vec<String> = Vec::new();
+        let mut ayah_details: Vec<AyahDetail> = Vec::new();
+        for &i in indices {
+            let a = &inner.quran[i];
+            let text = a.get("aya_text")
+                .or_else(|| a.get("text"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.trim().to_string())
+                .unwrap_or_default();
+            let surah = a.get("sura_no").and_then(|v| v.as_i64()).unwrap_or(0);
+            let ayah = a.get("aya_no").and_then(|v| v.as_i64()).unwrap_or(0);
+            ayahs.push(text.clone());
+            ayah_details.push(AyahDetail { surah, ayah, text });
+        }
 
         let ayah_text_html = ayahs.join(" ");
         let first_ayah_html = ayahs.first().cloned().unwrap_or_default();
@@ -292,6 +304,7 @@ impl DataLoader {
             ayah_text_html,
             first_ayah_html,
             ayahs,
+            ayah_details,
         })
     }
 

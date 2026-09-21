@@ -4,12 +4,19 @@ use crate::tray;
 use crate::windows;
 use crate::AppContext;
 use serde_json::{json, Value};
+use base64::prelude::*;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_dialog::{DialogExt, FilePath};
 
 // Whitelist for allowed Quran config keys to prevent prototype pollution
 const ALLOWED_QURAN_KEYS: &[&str] = &[
+    "audioAutoPlay",
+    "audioBasePath",
+    "audioReciter",
+    "audioRepeatCount",
     "completedPages",
     "currentQuranPage",
     "dailyGoal",
@@ -652,4 +659,121 @@ pub fn welcome_done(
     log::info!("welcome_done: orchestrator restarted");
     windows::open_settings(&app);
     log::info!("welcome_done: settings opened");
+}
+
+// ── Quran Audio ────────────────────────────────────────────────────────────
+
+fn path_buf_from_fp(fp: &FilePath) -> Option<PathBuf> {
+    match fp {
+        FilePath::Path(pb) => Some(pb.clone()),
+        FilePath::Url(u) => u.to_file_path().ok(),
+    }
+}
+
+fn map_reciter_to_online(reciter: &str) -> &str {
+    match reciter {
+        "Hussary.teacher_64kbps" | "Hussary.teacher_32kbps" => "Husary_Muallim_128kbps",
+        "AbdulSamad_64kbps" => "AbdulSamad_64kbps_QuranExplorer.Com",
+        "Ahmed_ibn_Ali_al-Ajamy_64kbps" => "Ahmed_ibn_Ali_al-Ajamy_64kbps_QuranExplorer.Com",
+        "Minshawy_Mujawwad_64kbps" => "Minshawy_Mujawwad_192kbps",
+        "Minshawy_Teacher_128kbps" => "Minshawy_Teacher_128kbps",
+        "Minshawy_Murattal_128kbps" => "Minshawy_Murattal_128kbps",
+        "Minshawy_Murattal_48kbps" => "Minshawy_Murattal_128kbps",
+        "Husary_64kbps" => "Husary_64kbps",
+        "Husary_40kbps" => "Husary_40kbps",
+        "Husary_Mujawwad_64kbps" => "Husary_Mujawwad_64kbps",
+        "husary_qasr_64kbps" => "Husary_64kbps",
+        "Alafasy_64kbps" => "Alafasy_64kbps",
+        "Abdul_Basit_Murattal_40kbps" => "Abdul_Basit_Murattal_40kbps",
+        "Maher_AlMuaiqly_64kbps" => "Maher_AlMuaiqly_64kbps",
+        "Hudhaify_32kbps" => "Hudhaify_32kbps",
+        "Ibrahim_Akhdar_32kbps" => "Ibrahim_Akhdar_32kbps",
+        "Ayman_Sowaid_64kbps" => "Ayman_Sowaid_64kbps",
+        "Fares_Abbad_64kbps" => "Fares_Abbad_64kbps",
+        "Mohammad_al_Tablaway_64kbps" => "Mohammad_al_Tablaway_64kbps",
+        "Muhammad_Ayyoub_32kbps" => "Muhammad_Ayyoub_32kbps",
+        "Nasser_Alqatami_128kbps" => "Nasser_Alqatami_128kbps",
+        "Abdullaah_3awwaad_Al-Juhaynee_128kbps" => "Abdullaah_3awwaad_Al-Juhaynee_128kbps",
+        "tunaiji_64kbps" => "tunaiji_64kbps",
+        "Banna_32kbps" => "Banna_32kbps",
+        "English_Walk" => "English_Walk",
+        other => other,
+    }
+}
+
+#[tauri::command]
+pub async fn q_pick_audio_dir(app: AppHandle) -> Value {
+    let (tx, rx) = tokio::sync::oneshot::channel::<Option<FilePath>>();
+    app.dialog()
+        .file()
+        .set_title("اختر مجلد التلاوات القرآنية")
+        .pick_folder(move |p| {
+            let _ = tx.send(p);
+        });
+
+    match rx.await {
+        Ok(Some(fp)) => match path_buf_from_fp(&fp) {
+            Some(pb) => {
+                let s = pb.to_string_lossy().to_string();
+                json!({ "ok": true, "path": s })
+            }
+            None => json!({ "ok": false, "err": "invalid_path" }),
+        },
+        Ok(None) => json!({ "ok": false, "err": "cancelled" }),
+        Err(e) => json!({ "ok": false, "err": e.to_string() }),
+    }
+}
+
+#[tauri::command]
+pub fn q_get_audio_url(
+    store: State<'_, ConfigStore>,
+    surah: i64,
+    ayah: i64,
+    reciter: Option<String>,
+) -> Value {
+    let q = store.get_quran_config();
+    let chosen_reciter = reciter
+        .or(q.audio_reciter)
+        .unwrap_or_else(|| "Husary_64kbps".to_string());
+    let filename = format!("{:03}{:03}.mp3", surah, ayah);
+
+    if let Some(base_str) = &q.audio_base_path {
+        let base = Path::new(base_str);
+        // Candidate 1: base / reciter / filename
+        let candidate1 = base.join(&chosen_reciter).join(&filename);
+        // Candidate 2: base / filename (if the user selected the reciter's folder directly)
+        let candidate2 = base.join(&filename);
+
+        let target = if candidate1.is_file() {
+            Some(candidate1)
+        } else if candidate2.is_file() {
+            Some(candidate2)
+        } else {
+            None
+        };
+
+        if let Some(p) = target {
+            if let Ok(bytes) = std::fs::read(&p) {
+                let encoded = BASE64_STANDARD.encode(&bytes);
+                return json!({
+                    "url": format!("data:audio/mp3;base64,{}", encoded),
+                    "local": true,
+                    "surah": surah,
+                    "ayah": ayah,
+                    "reciter": chosen_reciter,
+                    "filePath": p.to_string_lossy(),
+                });
+            }
+        }
+    }
+
+    let online_folder = map_reciter_to_online(&chosen_reciter);
+    let online_url = format!("https://everyayah.com/data/{}/{}", online_folder, filename);
+    json!({
+        "url": online_url,
+        "local": false,
+        "surah": surah,
+        "ayah": ayah,
+        "reciter": chosen_reciter,
+    })
 }

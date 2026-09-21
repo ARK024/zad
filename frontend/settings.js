@@ -90,6 +90,10 @@ async function load() {
     hideHeader: false,
     progressiveModeEnabled: false,
     currentQuranPage: 1,
+    audioReciter: 'Husary_64kbps',
+    audioBasePath: '',
+    audioRepeatCount: 1,
+    audioAutoPlay: false,
   });
   gid('quranDailyGoal').value = q.dailyGoal;
   gid('quranInterval').value = q.memorizationInterval;
@@ -103,6 +107,10 @@ async function load() {
   gid('quranHideHeader').checked = !!q.hideHeader;
   gid('quranProgressiveMode').checked = !!q.progressiveModeEnabled;
   gid('quranStartPage').value = q.currentQuranPage || 1;
+  if (gid('quranAudioReciter')) gid('quranAudioReciter').value = q.audioReciter || 'Husary_64kbps';
+  if (gid('quranAudioBasePath')) gid('quranAudioBasePath').value = q.audioBasePath || '';
+  if (gid('quranAudioRepeatCount')) gid('quranAudioRepeatCount').value = q.audioRepeatCount || 1;
+  if (gid('quranAudioAutoPlay')) gid('quranAudioAutoPlay').checked = !!q.audioAutoPlay;
 
   // Load Quran Stats
   const qd = await window.api.invoke('q:store:get', null);
@@ -176,6 +184,10 @@ gid('btnSave').addEventListener('click', async () => {
     recentPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
     hideHeader: gid('quranHideHeader').checked,
     progressiveModeEnabled: gid('quranProgressiveMode').checked,
+    audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
+    audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
+    audioRepeatCount: parseInt(gid('quranAudioRepeatCount')?.value, 10) || 1,
+    audioAutoPlay: gid('quranAudioAutoPlay')?.checked || false,
   };
 
   await window.api.invoke('q:store:set', qData);
@@ -270,6 +282,18 @@ gid('btnSetStartPage').addEventListener('click', async () => {
   }
   await window.api.invoke('q:store:set', { currentQuranPage: p });
   showStatus('تم تعيين صفحة البداية لـ ' + p);
+});
+
+gid('btnBrowseAudioDir')?.addEventListener('click', async () => {
+  try {
+    const res = await window.api.invoke('q_pick_audio_dir');
+    if (res && res.ok && res.path) {
+      gid('quranAudioBasePath').value = res.path;
+      showStatus('تم تحديد مجلد الصوتيات بنجاح!', true);
+    }
+  } catch (e) {
+    console.error('Failed to pick audio dir', e);
+  }
 });
 
 gid('btnUndoLastMemorized').addEventListener('click', async () => {

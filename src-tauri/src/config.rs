@@ -161,6 +161,10 @@ pub struct QuranConfig {
     pub progressive_mode_enabled: Option<bool>,
     pub progressive_level: Option<i64>,
     pub progressive_chunk: Option<i64>,
+    pub audio_base_path: Option<String>,
+    pub audio_reciter: Option<String>,
+    pub audio_repeat_count: Option<i64>,
+    pub audio_auto_play: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -619,6 +623,10 @@ impl ConfigStore {
             "progressiveModeEnabled" => q.progressive_mode_enabled = to_bool(&value),
             "progressiveLevel" => q.progressive_level = value.as_i64(),
             "progressiveChunk" => q.progressive_chunk = value.as_i64(),
+            "audioBasePath" => q.audio_base_path = value.as_str().map(|s| s.to_string()),
+            "audioReciter" => q.audio_reciter = value.as_str().map(|s| s.to_string()),
+            "audioRepeatCount" => q.audio_repeat_count = value.as_i64(),
+            "audioAutoPlay" => q.audio_auto_play = to_bool(&value),
             _ => log::warn!("Unknown quran config key: {}", key),
         }
     }
@@ -695,6 +703,10 @@ impl ConfigStore {
                     "progressiveModeEnabled" => q.progressive_mode_enabled = to_bool(v),
                     "progressiveLevel" => q.progressive_level = v.as_i64(),
                     "progressiveChunk" => q.progressive_chunk = v.as_i64(),
+                    "audioBasePath" => q.audio_base_path = v.as_str().map(|s| s.to_string()),
+                    "audioReciter" => q.audio_reciter = v.as_str().map(|s| s.to_string()),
+                    "audioRepeatCount" => q.audio_repeat_count = v.as_i64(),
+                    "audioAutoPlay" => q.audio_auto_play = to_bool(v),
                     _ => log::warn!("Unknown quran config key in update: {}", k),
                 }
             }
@@ -743,6 +755,10 @@ impl ConfigStore {
             "progressiveModeEnabled" => q.progressive_mode_enabled.take().is_some(),
             "progressiveLevel" => q.progressive_level.take().is_some(),
             "progressiveChunk" => q.progressive_chunk.take().is_some(),
+            "audioBasePath" => q.audio_base_path.take().is_some(),
+            "audioReciter" => q.audio_reciter.take().is_some(),
+            "audioRepeatCount" => q.audio_repeat_count.take().is_some(),
+            "audioAutoPlay" => q.audio_auto_play.take().is_some(),
             _ => {
                 log::warn!("Unknown quran config key to remove: {}", key);
                 false

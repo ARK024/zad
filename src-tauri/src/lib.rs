@@ -320,6 +320,8 @@ pub fn run() {
             ipc::m_recalculate_sequence,
             ipc::m_get_fonts,
             ipc::welcome_done,
+            ipc::q_pick_audio_dir,
+            ipc::q_get_audio_url,
         ])
         .setup(|app| {
             let app_handle = app.handle();

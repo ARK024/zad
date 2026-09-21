@@ -168,6 +168,70 @@
         </div>
       </div>
       <div class="card">
+        <div class="card-head">🔊 التلاوة والصوتيات القرآنية</div>
+        <div class="card-body">
+          <div class="field">
+            <label>القارئ المفضل</label>
+            <select id="quranAudioReciter">
+              <optgroup label="المصاحف المعلمة">
+                <option value="Hussary.teacher_64kbps">محمود خليل الحصري (المصحف المعلم)</option>
+                <option value="Minshawy_Teacher_128kbps">محمد صديق المنشاوي (المصحف المعلم)</option>
+              </optgroup>
+              <optgroup label="المصاحف المرتلة">
+                <option value="Husary_64kbps" selected>محمود خليل الحصري (مرتل)</option>
+                <option value="Minshawy_Murattal_128kbps">محمد صديق المنشاوي (مرتل)</option>
+                <option value="AbdulSamad_64kbps">عبد الباسط عبد الصمد (مرتل)</option>
+                <option value="Alafasy_64kbps">مشاري راشد العفاسي</option>
+                <option value="Maher_AlMuaiqly_64kbps">ماهر المعيقلي</option>
+                <option value="Ahmed_ibn_Ali_al-Ajamy_64kbps">أحمد بن علي العجمي</option>
+                <option value="Hudhaify_32kbps">علي بن عبد الرحمن الحذيفي</option>
+                <option value="Ibrahim_Akhdar_32kbps">إبراهيم الأخضر</option>
+                <option value="Ayman_Sowaid_64kbps">أيمن سويد</option>
+                <option value="Fares_Abbad_64kbps">فارس عباد</option>
+                <option value="Mohammad_al_Tablaway_64kbps">محمد محمود الطبلاوي</option>
+                <option value="Muhammad_Ayyoub_32kbps">محمد أيوب</option>
+                <option value="Nasser_Alqatami_128kbps">ناصر القطامي</option>
+                <option value="Abdullaah_3awwaad_Al-Juhaynee_128kbps">عبد الله عواد الجهني</option>
+                <option value="tunaiji_64kbps">خليفة الطنيجي</option>
+                <option value="Banna_32kbps">محمود علي البنا</option>
+                <option value="husary_qasr_64kbps">محمود خليل الحصري (قصر المنفصل)</option>
+                <option value="English_Walk">إبراهيم ووك (ترجمة إنجليزية)</option>
+              </optgroup>
+              <optgroup label="المصاحف المجودة">
+                <option value="Husary_Mujawwad_64kbps">محمود خليل الحصري (مجود)</option>
+                <option value="Minshawy_Mujawwad_64kbps">محمد صديق المنشاوي (مجود)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field">
+            <label>مجلد الصوتيات المحلي على جهازك (اختياري)</label>
+            <div class="jump-row">
+              <input type="text" id="quranAudioBasePath" placeholder="مثال: D:\Quran_Audio" style="flex:1;">
+              <button class="btn-sec sm" id="btnBrowseAudioDir" type="button">📁 استعراض...</button>
+            </div>
+            <small style="color:var(--muted);font-size:11px;display:block;margin-top:4px;">
+              عند تحديد مجلد الصوتيات، سيعمل الصوت مباشرة وبسرعة من جهازك بدون إنترنت. إذا تركته فارغاً، يتم التشغيل عبر الإنترنت تلقائياً.
+            </small>
+          </div>
+          <div class="field">
+            <label>تكرار الآية أثناء الحفظ</label>
+            <select id="quranAudioRepeatCount">
+              <option value="1">مرة واحدة (بدون تكرار)</option>
+              <option value="3">3 مرات (تثبيت الحفظ)</option>
+              <option value="5">5 مرات</option>
+              <option value="7">7 مرات</option>
+              <option value="10">10 مرات</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="tog-row">
+              <span class="tog-lbl">تشغيل التلاوة تلقائياً <span class="tog-desc">بدء القراءة فور ظهور صفحة القرآن</span></span>
+              <label class="switch"><input type="checkbox" id="quranAudioAutoPlay"><span class="knob"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-head">صفحات محفوظة مسبقاً (الحفظ السابق)</div>
         <div class="card-body">
           <div class="field">
