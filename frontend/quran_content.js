@@ -352,35 +352,44 @@ async function getMultiplePagesFromBG(pageNumbers) {
   return window.api.invoke('q:bg:message', { type: 'getMultiplePages', pages: pageNumbers });
 }
 
-function bindHeaderToggle(toggleBtn, collapseBtn, headerEl) {
-  toggleBtn?.addEventListener('click', async (e) => {
-    e.stopPropagation();
+function bindHeaderToggle(collapsedBar, collapseBtn, headerEl, expandBtn) {
+  const expandAction = async (e) => {
+    if (e) e.stopPropagation();
     if (headerEl) headerEl.style.display = 'flex';
-    if (toggleBtn) toggleBtn.style.display = 'none';
+    if (collapsedBar) collapsedBar.style.display = 'none';
     try {
+      localStorage.setItem('quran_hide_header', 'false');
       await window.api.invoke('q:store:set', { hideHeader: false });
-    } catch (e) {
-      console.warn('Quran Widget: failed to save hideHeader state', e);
+    } catch (err) {
+      console.warn('Quran Widget: failed to save hideHeader state', err);
     }
-  });
+  };
 
-  collapseBtn?.addEventListener('click', async (e) => {
-    e.stopPropagation();
+  const collapseAction = async (e) => {
+    if (e) e.stopPropagation();
     if (headerEl) headerEl.style.display = 'none';
-    if (toggleBtn) toggleBtn.style.display = 'flex';
+    if (collapsedBar) collapsedBar.style.display = 'flex';
     try {
+      localStorage.setItem('quran_hide_header', 'true');
       await window.api.invoke('q:store:set', { hideHeader: true });
-    } catch (e) {
-      console.warn('Quran Widget: failed to save hideHeader state', e);
+    } catch (err) {
+      console.warn('Quran Widget: failed to save hideHeader state', err);
     }
-  });
+  };
+
+  const actualExpandBtn = expandBtn || collapsedBar?.querySelector('.quran-widget-header-btn');
+  actualExpandBtn?.addEventListener('click', expandAction);
+  collapsedBar?.addEventListener('dblclick', expandAction);
+  collapseBtn?.addEventListener('click', collapseAction);
 }
 
 async function showRecentReviewPage(recentData, widgetSize, hideHeader, _attempts = 0) {
   if (_attempts >= recentData.pages.length) {
     // All attempts exhausted — fall through to normal memorization
+    const localHide = localStorage.getItem('quran_hide_header');
     const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: false });
-    await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || widgetSize, data.hideHeader || hideHeader);
+    const resolvedHide = localHide !== null ? (localHide === 'true') : (data.hideHeader !== undefined ? !!data.hideHeader : !!hideHeader);
+    await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || widgetSize, resolvedHide);
     return;
   }
 
@@ -429,7 +438,11 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
     audioAutoPlay: false,
   });
   const testModeOn = fontData.testModeEnabled || false;
-  const isHeaderHidden = fontData.hideHeader !== undefined ? !!fontData.hideHeader : !!hideHeader;
+  const localHide = localStorage.getItem('quran_hide_header');
+  const isHeaderHidden = localHide !== null ? (localHide === 'true') : (fontData.hideHeader !== undefined ? !!fontData.hideHeader : !!hideHeader);
+  if (localHide === null && fontData.hideHeader !== undefined) {
+    localStorage.setItem('quran_hide_header', fontData.hideHeader ? 'true' : 'false');
+  }
   const reciterId = fontData.audioReciter || 'Husary_64kbps';
   const reciterDisplayName = RECITER_NAMES[reciterId] || 'محمود خليل الحصري';
   const repeatCount = fontData.audioRepeatCount || 1;
@@ -439,9 +452,13 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   widget.id = 'quran-memorization-widget';
 
   const firstPage = sessionPages[0];
+  const lastPage = sessionPages[sessionPages.length - 1];
   const surahTitle = firstPage.pageData.surahTitle;
   const pageNumber = firstPage.pageNum;
   const sessionCount = sessionPages.length;
+  const pageDisplay = sessionCount > 1
+    ? `${toArabicNumerals(firstPage.pageNum)}–${toArabicNumerals(lastPage.pageNum)}`
+    : `${toArabicNumerals(pageNumber)}`;
 
   const progressPct = Math.min(Math.round(((recentData.currentIndex + sessionCount) / recentData.totalToday) * 100), 100);
   const reviewText = sessionCount > 1
@@ -455,7 +472,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">⚡ قريب - سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
-          <span class="quran-widget-page-number">صفحة ${toArabicNumerals(pageNumber)}</span>
+          <span class="quran-widget-page-number">صفحة ${pageDisplay}</span>
           ${testBtnHtml}
           <button class="quran-widget-header-btn" id="quran-header-collapse-btn" title="تصغير الهيدر">▲</button>
         </div>
@@ -474,8 +491,8 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
       </div>
     </div>
     <div class="quran-widget-header-collapsed recent" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
-      <span>⚡ ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
-      <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
+      <span>⚡ ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span></span>
+      <button class="quran-widget-header-btn" id="quran-recent-header-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
   `;
 
@@ -562,7 +579,8 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const toggleBtn = widget.querySelector('#quran-header-toggle');
   const collapseBtn = widget.querySelector('#quran-header-collapse-btn');
   const headerEl = widget.querySelector('#quran-recent-header-content');
-  bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
+  const expandBtn = widget.querySelector('#quran-recent-header-expand-btn') || toggleBtn?.querySelector('.quran-widget-header-btn');
+  bindHeaderToggle(toggleBtn, collapseBtn, headerEl, expandBtn);
 
   document.getElementById('quran-btn-recent-skip')?.addEventListener('click', async () => {
     try {
@@ -648,9 +666,11 @@ async function initQuranWidget() {
 
 
     const widgetSize = data.widgetSize || 'medium';
-    const hideHeader = data.hideHeader || false;
-
-    
+    const localHide = localStorage.getItem('quran_hide_header');
+    const hideHeader = localHide !== null ? (localHide === 'true') : (data.hideHeader !== undefined ? !!data.hideHeader : false);
+    if (localHide === null && data.hideHeader !== undefined) {
+      localStorage.setItem('quran_hide_header', data.hideHeader ? 'true' : 'false');
+    }
 
     if (data.reviewEnabled) {
       const reviewData = await StorageManager.getTodayReviewPages();
@@ -678,8 +698,10 @@ async function initQuranWidget() {
 async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0) {
   if (_attempts >= reviewData.pages.length) {
     console.warn('Quran Widget: تعذّر تحميل أي صفحة مراجعة، الانتقال للحفظ');
+    const localHide = localStorage.getItem('quran_hide_header');
     const data = await window.api.invoke('q:store:get', ['currentQuranPage', 'widgetSize', 'hideHeader']);
-    await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', data.hideHeader || false);
+    const resolvedHide = localHide !== null ? (localHide === 'true') : (data.hideHeader !== undefined ? !!data.hideHeader : hideHeader);
+    await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', resolvedHide);
     return;
   }
 
@@ -698,8 +720,10 @@ async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0)
     if (nd.currentIndex < nd.pages.length) {
       await showReviewPage(nd, widgetSize, hideHeader, _attempts + 1);
     } else {
+      const localHide = localStorage.getItem('quran_hide_header');
       const data = await window.api.invoke('q:store:get', ['currentQuranPage', 'widgetSize', 'hideHeader']);
-      await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', data.hideHeader || false);
+      const resolvedHide = localHide !== null ? (localHide === 'true') : (data.hideHeader !== undefined ? !!data.hideHeader : hideHeader);
+      await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', resolvedHide);
     }
     return;
   }
@@ -775,7 +799,11 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
     audioAutoPlay: false,
   });
   const testModeOn = _reviewFontData.testModeEnabled || false;
-  const isHeaderHidden = _reviewFontData.hideHeader !== undefined ? !!_reviewFontData.hideHeader : !!hideHeader;
+  const localHide = localStorage.getItem('quran_hide_header');
+  const isHeaderHidden = localHide !== null ? (localHide === 'true') : (_reviewFontData.hideHeader !== undefined ? !!_reviewFontData.hideHeader : !!hideHeader);
+  if (localHide === null && _reviewFontData.hideHeader !== undefined) {
+    localStorage.setItem('quran_hide_header', _reviewFontData.hideHeader ? 'true' : 'false');
+  }
   const reciterId = _reviewFontData.audioReciter || 'Husary_64kbps';
   const reciterDisplayName = RECITER_NAMES[reciterId] || 'محمود خليل الحصري';
   const repeatCount = _reviewFontData.audioRepeatCount || 1;
@@ -786,9 +814,13 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
 
   // عنوان الهدر: أول سورة في الجلسة
   const firstPage = sessionPages[0];
+  const lastPage = sessionPages[sessionPages.length - 1];
   const surahTitle = firstPage.pageData.surahTitle;
   const pageNumber = firstPage.pageNum;
   const sessionCount = sessionPages.length;
+  const pageDisplay = sessionCount > 1
+    ? `${toArabicNumerals(firstPage.pageNum)}–${toArabicNumerals(lastPage.pageNum)}`
+    : `${toArabicNumerals(pageNumber)}`;
 
   const globalIdx = reviewData.globalIndex || reviewData.currentIndex;
   const reviewProgressText = `بعيد: ${globalIdx + 1}–${globalIdx + sessionCount} من ${reviewData.totalToday}`;
@@ -801,7 +833,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📅 بعيد - سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
-          <span class="quran-widget-page-number">صفحة ${toArabicNumerals(pageNumber)}</span>
+          <span class="quran-widget-page-number">صفحة ${pageDisplay}</span>
           ${testBtnHtml}
           <button class="quran-widget-header-btn" id="quran-review-collapse-btn" title="تصغير الهيدر">▲</button>
         </div>
@@ -820,8 +852,8 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       </div>
     </div>
     <div class="quran-widget-header-collapsed distant" id="quran-review-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
-      <span>🔄 ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
-      <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
+      <span>🔄 ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span></span>
+      <button class="quran-widget-header-btn" id="quran-review-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
   `;
 
@@ -912,7 +944,8 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const revToggleBtn = widget.querySelector('#quran-review-toggle');
   const revCollapseBtn = widget.querySelector('#quran-review-collapse-btn');
   const revHeaderEl = widget.querySelector('#quran-review-header-content');
-  bindHeaderToggle(revToggleBtn, revCollapseBtn, revHeaderEl);
+  const revExpandBtn = widget.querySelector('#quran-review-expand-btn') || revToggleBtn?.querySelector('.quran-widget-header-btn');
+  bindHeaderToggle(revToggleBtn, revCollapseBtn, revHeaderEl, revExpandBtn);
 
   document.getElementById('quran-btn-skip')?.addEventListener('click', async () => {
     try {
@@ -1212,7 +1245,11 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     audioAutoPlay: false,
   });
 
-  const isHeaderHidden = config.hideHeader !== undefined ? !!config.hideHeader : !!hideHeader;
+  const localHide = localStorage.getItem('quran_hide_header');
+  const isHeaderHidden = localHide !== null ? (localHide === 'true') : (config.hideHeader !== undefined ? !!config.hideHeader : !!hideHeader);
+  if (localHide === null && config.hideHeader !== undefined) {
+    localStorage.setItem('quran_hide_header', config.hideHeader ? 'true' : 'false');
+  }
   let progressiveModeOn = !!config.progressiveModeEnabled;
   let currentLevel = Math.max(0, Math.min(4, config.progressiveLevel || 0));
   let currentChunkIdx = config.progressiveChunk || 0;
@@ -1259,7 +1296,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     </div>
     <div class="quran-widget-header-collapsed" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
       <span>📖 سورة ${surahTitle} — صفحة <span class="collapsed-page-num">${toArabicNumerals(pageNumber)}</span></span>
-      <button class="quran-widget-header-btn" title="توسيع الهيدر">▼</button>
+      <button class="quran-widget-header-btn" id="quran-header-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
     <div class="quran-progressive-panel" id="quran-prog-panel" style="${progressiveModeOn ? '' : 'display:none;'}">
       <div class="quran-prog-row">
@@ -1362,7 +1399,8 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   const toggleBtn = widget.querySelector('#quran-header-toggle');
   const collapseBtn = widget.querySelector('#quran-header-collapse-btn');
   const headerEl = widget.querySelector('#quran-header-content');
-  bindHeaderToggle(toggleBtn, collapseBtn, headerEl);
+  const expandBtn = widget.querySelector('#quran-header-expand-btn') || toggleBtn?.querySelector('.quran-widget-header-btn');
+  bindHeaderToggle(toggleBtn, collapseBtn, headerEl, expandBtn);
 
   // تبديل الوضع بين عادي ومتدرج
   document.getElementById('quran-mode-toggle')?.addEventListener('click', async (e) => {
@@ -1515,6 +1553,7 @@ window.api.receive('q:store:changed', (changes) => {
     if (changes.hideHeader !== undefined) {
       const val = (changes.hideHeader && typeof changes.hideHeader === 'object' && changes.hideHeader.newValue !== undefined) ? changes.hideHeader.newValue : changes.hideHeader;
       const isHidden = !!val;
+      localStorage.setItem('quran_hide_header', isHidden ? 'true' : 'false');
       const widget = document.getElementById('quran-memorization-widget');
       if (widget) {
         const headerEl = widget.querySelector('#quran-header-content, #quran-recent-header-content, #quran-review-header-content');
