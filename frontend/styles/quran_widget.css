@@ -682,6 +682,7 @@
   gap: 4px;
   font-size: 11.5px;
   user-select: none;
+  -webkit-app-region: no-drag;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -698,12 +699,14 @@
   gap: 4px;
   flex-wrap: nowrap;
   overflow-x: auto;
+  -webkit-app-region: no-drag;
 }
 
 .quran-prog-pills {
   display: flex;
   align-items: center;
   gap: 3px;
+  -webkit-app-region: no-drag;
 }
 
 .quran-prog-pill {
@@ -716,6 +719,7 @@
   cursor: pointer;
   transition: all .15s ease;
   white-space: nowrap;
+  -webkit-app-region: no-drag;
 }
 
 .quran-prog-pill:hover {
@@ -741,6 +745,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  -webkit-app-region: no-drag;
 }
 
 .quran-prog-btn-step:hover {
@@ -749,34 +754,62 @@
 }
 
 /* ─── Progressive Word Masking & Instant Peek ─── */
+.test-word {
+  display: inline-block;
+  vertical-align: baseline;
+  transition: filter .2s cubic-bezier(.4, 0, .2, 1), opacity .2s, background-color .2s;
+}
+
 .test-word.masked-word {
-  filter: blur(8px);
+  display: inline-block !important;
+  filter: blur(8px) !important;
+  opacity: 0.35 !important;
   user-select: none;
   cursor: pointer;
-  transition: filter .2s cubic-bezier(.4, 0, .2, 1), background-color .2s;
-  display: inline;
   border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
-.test-word.masked-word:hover,
+.test-word.masked-word:hover:not(.revealed) {
+  opacity: 0.65 !important;
+  filter: blur(5px) !important;
+}
+
 .test-word.masked-word.revealed {
   filter: none !important;
-  background-color: rgba(26, 152, 80, .14);
+  opacity: 1 !important;
+  background-color: rgba(26, 152, 80, .14) !important;
 }
 
-.test-word.keys-mode .tail-text {
-  filter: blur(7px);
-  transition: filter .2s ease;
+.test-word.keys-mode {
+  display: inline-block !important;
+  cursor: pointer;
 }
 
 .test-word.keys-mode .head-text {
+  display: inline-block !important;
   font-weight: bold;
   opacity: .95;
 }
 
-.test-word.keys-mode:hover .tail-text,
+.test-word.keys-mode .tail-text {
+  display: inline-block !important;
+  filter: blur(7px) !important;
+  opacity: 0.35 !important;
+  transition: filter .2s ease, opacity .2s ease;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
+.test-word.keys-mode:hover:not(.revealed) .tail-text {
+  opacity: 0.65 !important;
+  filter: blur(4px) !important;
+}
+
 .test-word.keys-mode.revealed .tail-text {
   filter: none !important;
+  opacity: 1 !important;
+  background-color: rgba(26, 152, 80, .14) !important;
 }
 
 /* ─── Quran Ayah Interactive Highlighting & Audio Unit ─── */
