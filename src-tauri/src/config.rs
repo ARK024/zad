@@ -548,10 +548,17 @@ impl ConfigStore {
 
     pub fn quran_get(&self) -> Value {
         let q = self.quran.lock();
-        serde_json::to_value(q.clone()).unwrap_or_else(|e| {
+        let mut val = serde_json::to_value(q.clone()).unwrap_or_else(|e| {
             log::error!("Failed to serialize QuranConfig to Value: {}", e);
             json!({})
-        })
+        });
+        if let Some(obj) = val.as_object_mut() {
+            if let Some(h) = q.hide_header {
+                obj.insert("hideHeader".to_string(), json!(h));
+                obj.insert("hide_header".to_string(), json!(h));
+            }
+        }
+        val
     }
 
     pub fn quran_set(&self, key: &str, value: Value) {

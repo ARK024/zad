@@ -282,6 +282,35 @@
   text-align: center;
 }
 
+/* ─── Declarative Header Collapse States ─── */
+#quran-memorization-widget.is-header-collapsed .quran-widget-header,
+#quran-memorization-widget.is-header-collapsed #quran-header-content,
+#quran-memorization-widget.is-header-collapsed #quran-recent-header-content,
+#quran-memorization-widget.is-header-collapsed #quran-review-header-content {
+  display: none !important;
+}
+
+#quran-memorization-widget.is-header-collapsed .quran-widget-header-collapsed,
+#quran-memorization-widget.is-header-collapsed #quran-header-toggle,
+#quran-memorization-widget.is-header-collapsed #quran-review-toggle,
+#quran-memorization-widget.is-header-collapsed #quran-recent-collapse-toggle {
+  display: flex !important;
+}
+
+#quran-memorization-widget:not(.is-header-collapsed) .quran-widget-header,
+#quran-memorization-widget:not(.is-header-collapsed) #quran-header-content,
+#quran-memorization-widget:not(.is-header-collapsed) #quran-recent-header-content,
+#quran-memorization-widget:not(.is-header-collapsed) #quran-review-header-content {
+  display: flex !important;
+}
+
+#quran-memorization-widget:not(.is-header-collapsed) .quran-widget-header-collapsed,
+#quran-memorization-widget:not(.is-header-collapsed) #quran-header-toggle,
+#quran-memorization-widget:not(.is-header-collapsed) #quran-review-toggle,
+#quran-memorization-widget:not(.is-header-collapsed) #quran-recent-collapse-toggle {
+  display: none !important;
+}
+
 /* ─── Collapsed header (Ultra-Slim) ─── */
 .quran-widget-header-collapsed {
   background: linear-gradient(135deg, var(--h-from), var(--h-to));

@@ -255,6 +255,12 @@ pub fn q_store_get(store: State<'_, ConfigStore>, keys: Value) -> Value {
                 out.insert(s.to_string(), resolve_q_val(s).unwrap_or(Value::Null));
             }
         }
+        if let Some(h) = out.get("hideHeader").cloned().or_else(|| out.get("hide_header").cloned()) {
+            if !h.is_null() {
+                out.insert("hideHeader".to_string(), h.clone());
+                out.insert("hide_header".to_string(), h);
+            }
+        }
         return Value::Object(out);
     }
     if let Some(obj) = keys.as_object() {
@@ -268,11 +274,20 @@ pub fn q_store_get(store: State<'_, ConfigStore>, keys: Value) -> Value {
             };
             out.insert(k.clone(), resolved);
         }
+        if let Some(h) = out.get("hideHeader").cloned().or_else(|| out.get("hide_header").cloned()) {
+            out.insert("hideHeader".to_string(), h.clone());
+            out.insert("hide_header".to_string(), h);
+        }
         return Value::Object(out);
     }
     if let Some(s) = keys.as_str() {
         let mut out = serde_json::Map::new();
-        out.insert(s.to_string(), resolve_q_val(s).unwrap_or(Value::Null));
+        let val = resolve_q_val(s).unwrap_or(Value::Null);
+        out.insert(s.to_string(), val.clone());
+        if s == "hideHeader" || s == "hide_header" {
+            out.insert("hideHeader".to_string(), val.clone());
+            out.insert("hide_header".to_string(), val);
+        }
         return Value::Object(out);
     }
     q
@@ -302,6 +317,13 @@ pub fn q_store_set(
             if old != Some(v) {
                 store.quran_set(k, v.clone());
                 changed.insert(k.clone(), json!({"newValue": v}));
+                if k == "hideHeader" {
+                    store.quran_set("hide_header", v.clone());
+                    changed.insert("hide_header".to_string(), json!({"newValue": v}));
+                } else if k == "hide_header" {
+                    store.quran_set("hideHeader", v.clone());
+                    changed.insert("hideHeader".to_string(), json!({"newValue": v}));
+                }
                 log::debug!("Quran config changed: {} = {:?}", k, v);
                 
                 if k == "currentQuranPage"
@@ -816,3 +838,32 @@ pub fn q_get_audio_url(
         "reciter": chosen_reciter,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_allowed_quran_keys_is_sorted() {
+        for i in 0..ALLOWED_QURAN_KEYS.len() - 1 {
+            assert!(
+                ALLOWED_QURAN_KEYS[i] < ALLOWED_QURAN_KEYS[i + 1],
+                "ALLOWED_QURAN_KEYS is not sorted: {:?} is not < {:?}",
+                ALLOWED_QURAN_KEYS[i],
+                ALLOWED_QURAN_KEYS[i + 1]
+            );
+        }
+    }
+
+    #[test]
+    fn test_is_allowed_quran_key() {
+        assert!(is_allowed_quran_key("hideHeader"));
+        assert!(is_allowed_quran_key("hide_header"));
+        assert!(is_allowed_quran_key("audioAutoPlay"));
+        assert!(is_allowed_quran_key("audioBasePath"));
+        assert!(is_allowed_quran_key("audioReciter"));
+        assert!(is_allowed_quran_key("audioRepeatCount"));
+        assert!(!is_allowed_quran_key("unknownKey"));
+    }
+}
+

@@ -104,7 +104,13 @@ async function load() {
   gid('quranRecentReviewEnabled').checked = !!q.recentReviewEnabled;
   gid('quranReviewDays').value = q.reviewDays || 7;
   gid('quranReviewPagesPerSession').value = q.reviewPagesPerSession || 10;
-  gid('quranHideHeader').checked = !!q.hideHeader;
+  const localHide = localStorage.getItem('quran_hide_header');
+  const storeHide = (q.hideHeader !== undefined && q.hideHeader !== null)
+    ? !!q.hideHeader
+    : (q.hide_header !== undefined && q.hide_header !== null ? !!q.hide_header : null);
+  const effectiveHide = (storeHide !== null) ? storeHide : (localHide === 'true');
+  gid('quranHideHeader').checked = effectiveHide;
+  localStorage.setItem('quran_hide_header', effectiveHide ? 'true' : 'false');
   gid('quranProgressiveMode').checked = !!q.progressiveModeEnabled;
   gid('quranStartPage').value = q.currentQuranPage || 1;
   if (gid('quranAudioReciter')) gid('quranAudioReciter').value = q.audioReciter || 'Husary_64kbps';
@@ -147,9 +153,12 @@ gid('quranProgressiveMode')?.addEventListener('change', async () => {
 });
 
 gid('quranHideHeader')?.addEventListener('change', async () => {
+  const isChecked = !!gid('quranHideHeader').checked;
+  localStorage.setItem('quran_hide_header', isChecked ? 'true' : 'false');
   try {
     await window.api.invoke('q:store:set', {
-      hideHeader: gid('quranHideHeader').checked
+      hideHeader: isChecked,
+      hide_header: isChecked
     });
   } catch (e) {
     console.warn('Failed to auto-save hideHeader', e);
@@ -172,6 +181,9 @@ gid('btnSave').addEventListener('click', async () => {
   const qGoal = parseInt(gid('quranDailyGoal').value, 10) || 1;
   const qInterv = parseInt(gid('quranInterval').value, 10) || 10;
 
+  const hideH = !!gid('quranHideHeader').checked;
+  localStorage.setItem('quran_hide_header', hideH ? 'true' : 'false');
+
   const qData = {
     dailyGoal: qGoal,
     memorizationInterval: qInterv,
@@ -182,7 +194,8 @@ gid('btnSave').addEventListener('click', async () => {
     reviewDays: parseInt(gid('quranReviewDays').value, 10) || 7,
     reviewPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
     recentPagesPerSession: parseInt(gid('quranReviewPagesPerSession').value, 10) || 10,
-    hideHeader: gid('quranHideHeader').checked,
+    hideHeader: hideH,
+    hide_header: hideH,
     progressiveModeEnabled: gid('quranProgressiveMode').checked,
     audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
     audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
@@ -218,10 +231,13 @@ gid('btnSave').addEventListener('click', async () => {
 // Quran actions
 gid('btnShowQuranNow')?.addEventListener('click', async () => {
   try {
+    const hideH = !!gid('quranHideHeader').checked;
+    localStorage.setItem('quran_hide_header', hideH ? 'true' : 'false');
     const qData = {
       widgetSize: gid('quranWidgetSize').value,
       fontSizePx: parseInt(gid('quranFontSize').value, 10) || 26,
-      hideHeader: gid('quranHideHeader').checked,
+      hideHeader: hideH,
+      hide_header: hideH,
       progressiveModeEnabled: gid('quranProgressiveMode').checked,
       audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
       audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
@@ -248,10 +264,13 @@ gid('btnShowNow')?.addEventListener('click', async () => {
 
   if (isQuranTabActive || isQuranOnly) {
     try {
+      const hideH = !!gid('quranHideHeader').checked;
+      localStorage.setItem('quran_hide_header', hideH ? 'true' : 'false');
       const qData = {
         widgetSize: gid('quranWidgetSize').value,
         fontSizePx: parseInt(gid('quranFontSize').value, 10) || 26,
-        hideHeader: gid('quranHideHeader').checked,
+        hideHeader: hideH,
+        hide_header: hideH,
         progressiveModeEnabled: gid('quranProgressiveMode').checked,
         audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
         audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
@@ -532,7 +551,10 @@ if (window.api && window.api.receive) {
       const chk = document.getElementById('quranHideHeader');
       const raw = changes.hideHeader !== undefined ? changes.hideHeader : changes.hide_header;
       const val = (raw && typeof raw === 'object' && raw.newValue !== undefined) ? raw.newValue : raw;
-      if (chk) chk.checked = !!val;
+      const isHidden = !!val;
+      localStorage.setItem('quran_hide_header', isHidden ? 'true' : 'false');
+      if (chk) chk.checked = isHidden;
     }
   });
 }
+
