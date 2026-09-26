@@ -55,6 +55,7 @@ const StorageManager = {
       return;
     }
 
+    // أول تشغيل: لا توجد بيانات — نُهيّئ الحد الأدنى فقط بدون null keys
     if (!data.memorizedPages) {
       await window.api.invoke('q:store:set', {
         memorizedPages: [],
@@ -63,8 +64,8 @@ const StorageManager = {
         dailyStreak: 0,
         lastCompletedDate: null,
         dailyGoal: 1,
-        widgetX: null,
-        widgetY: null,
+        // ملاحظة: widgetX و widgetY لا نُرسلها هنا لتجنب events غير ضرورية
+        // سيتم تحميلهما من الـ Store عند الحاجة
       });
     }
   },

@@ -331,8 +331,17 @@ pub fn create_quran_window(app: &AppHandle, store: &ConfigStore) {
 pub fn show_quran_window(app: &AppHandle) {
     log::debug!("Showing Quran window");
     if let Some(w) = app.get_webview_window(QURAN_LABEL) {
-        // Set the trigger flag and call initQuranWidget directly to avoid full page reload overhead
-        let _ = w.eval("localStorage.setItem('showQuranWidget', 'true'); if (typeof initQuranWidget === 'function') { initQuranWidget(); } else { window.location.reload(); }");
+        // نضع العلم في localStorage ثم نستدعي initQuranWidget لو موجودة
+        // لو الصفحة لم تنتهِ من التحميل بعد (eval يُرجع خطأ)، الـ DOMContentLoaded
+        // سيستدعيها تلقائياً لأنها تتحقق من localStorage عند الانتهاء
+        let _ = w.eval(
+            "try { \
+                localStorage.setItem('showQuranWidget', 'true'); \
+                if (typeof initQuranWidget === 'function') { \
+                    initQuranWidget().catch(function(e){ console.warn('initQuranWidget error:', e); }); \
+                } \
+            } catch(e) { console.warn('show_quran_window eval error:', e); }"
+        );
         log::debug!("Quran widget init triggered");
     } else {
         log::warn!("Quran window not found, cannot show");

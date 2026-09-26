@@ -655,11 +655,15 @@ pub fn welcome_done(
     log::info!("welcome_done: welcome closed");
     windows::create_quran_window(&app, &store);
     log::info!("welcome_done: quran window created");
+    // إظهار نافذة القرآن للمستخدم فوراً في أول تشغيل كما توضح شاشة الترحيب
+    windows::show_quran_window(&app);
+    log::info!("welcome_done: quran window shown");
     ctx.restart_orchestrator(&app);
     log::info!("welcome_done: orchestrator restarted");
     windows::open_settings(&app);
     log::info!("welcome_done: settings opened");
 }
+
 
 // ── Quran Audio ────────────────────────────────────────────────────────────
 
