@@ -389,8 +389,8 @@ function bindHeaderToggle(collapsedBar, collapseBtn, headerEl, expandBtn) {
 
   const actualExpandBtn = expandBtn || collapsedBar?.querySelector('.quran-widget-header-btn');
   actualExpandBtn?.addEventListener('click', expandAction);
-  // إصلاح: نقرة واحدة على الشريط المطوي تفتحه (كان dblclick)
-  collapsedBar?.addEventListener('click', (e) => {
+  // النقر المزدوج على الشريط المطوي يفتحه، بينما النقر العادي للسحب/التركيز دون فتح بالخطأ
+  collapsedBar?.addEventListener('dblclick', (e) => {
     // تجنب التفعيل عند الضغط على الزر نفسه (يتولاه expandAction)
     if (e.target.closest('.quran-widget-header-btn')) return;
     expandAction(e);
@@ -401,8 +401,8 @@ function bindHeaderToggle(collapsedBar, collapseBtn, headerEl, expandBtn) {
 async function showRecentReviewPage(recentData, widgetSize, hideHeader, _attempts = 0) {
   if (_attempts >= recentData.pages.length) {
     // All attempts exhausted — fall through to normal memorization
-    const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: false });
-    const resolvedHide = data.hideHeader !== undefined ? !!data.hideHeader : !!hideHeader;
+    const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: !!hideHeader });
+    const resolvedHide = (data.hideHeader !== undefined && data.hideHeader !== null) ? !!data.hideHeader : !!hideHeader;
     await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || widgetSize, resolvedHide);
     return;
   }
@@ -446,13 +446,13 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const fontData = await window.api.invoke('q:store:get', {
     fontSizePx: 26,
     testModeEnabled: false,
-    hideHeader: false,
+    hideHeader: !!hideHeader,
     audioReciter: 'Husary_64kbps',
     audioRepeatCount: 1,
     audioAutoPlay: false,
   });
   const testModeOn = fontData.testModeEnabled || false;
-  const isHeaderHidden = fontData.hideHeader !== undefined ? !!fontData.hideHeader : !!hideHeader;
+  const isHeaderHidden = (fontData.hideHeader !== undefined && fontData.hideHeader !== null) ? !!fontData.hideHeader : !!hideHeader;
   const reciterId = fontData.audioReciter || 'Husary_64kbps';
   const reciterDisplayName = RECITER_NAMES[reciterId] || 'محمود خليل الحصري';
   const repeatCount = fontData.audioRepeatCount || 1;
@@ -679,7 +679,7 @@ async function initQuranWidget() {
 
 
     const widgetSize = data.widgetSize || 'medium';
-    const hideHeader = data.hideHeader !== undefined ? !!data.hideHeader : false;
+    const hideHeader = (data.hideHeader !== undefined && data.hideHeader !== null) ? !!data.hideHeader : false;
 
     if (data.reviewEnabled) {
       const reviewData = await StorageManager.getTodayReviewPages();
@@ -707,8 +707,8 @@ async function initQuranWidget() {
 async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0) {
   if (_attempts >= reviewData.pages.length) {
     console.warn('Quran Widget: تعذّر تحميل أي صفحة مراجعة، الانتقال للحفظ');
-    const data = await window.api.invoke('q:store:get', ['currentQuranPage', 'widgetSize', 'hideHeader']);
-    const resolvedHide = data.hideHeader !== undefined ? !!data.hideHeader : hideHeader;
+    const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: !!hideHeader });
+    const resolvedHide = (data.hideHeader !== undefined && data.hideHeader !== null) ? !!data.hideHeader : !!hideHeader;
     await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', resolvedHide);
     return;
   }
@@ -728,8 +728,8 @@ async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0)
     if (nd.currentIndex < nd.pages.length) {
       await showReviewPage(nd, widgetSize, hideHeader, _attempts + 1);
     } else {
-      const data = await window.api.invoke('q:store:get', ['currentQuranPage', 'widgetSize', 'hideHeader']);
-      const resolvedHide = data.hideHeader !== undefined ? !!data.hideHeader : hideHeader;
+      const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: !!hideHeader });
+      const resolvedHide = (data.hideHeader !== undefined && data.hideHeader !== null) ? !!data.hideHeader : !!hideHeader;
       await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', resolvedHide);
     }
     return;
@@ -800,13 +800,13 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const _reviewFontData = await window.api.invoke('q:store:get', {
     fontSizePx: 26,
     testModeEnabled: false,
-    hideHeader: false,
+    hideHeader: !!hideHeader,
     audioReciter: 'Husary_64kbps',
     audioRepeatCount: 1,
     audioAutoPlay: false,
   });
   const testModeOn = _reviewFontData.testModeEnabled || false;
-  const isHeaderHidden = _reviewFontData.hideHeader !== undefined ? !!_reviewFontData.hideHeader : !!hideHeader;
+  const isHeaderHidden = (_reviewFontData.hideHeader !== undefined && _reviewFontData.hideHeader !== null) ? !!_reviewFontData.hideHeader : !!hideHeader;
   const reciterId = _reviewFontData.audioReciter || 'Husary_64kbps';
   const reciterDisplayName = RECITER_NAMES[reciterId] || 'محمود خليل الحصري';
   const repeatCount = _reviewFontData.audioRepeatCount || 1;
@@ -1242,13 +1242,13 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     progressiveModeEnabled: false,
     progressiveLevel: 0,
     progressiveChunk: 0,
-    hideHeader: false,
+    hideHeader: !!hideHeader,
     audioReciter: 'Husary_64kbps',
     audioRepeatCount: 1,
     audioAutoPlay: false,
   });
 
-  const isHeaderHidden = config.hideHeader !== undefined ? !!config.hideHeader : !!hideHeader;
+  const isHeaderHidden = (config.hideHeader !== undefined && config.hideHeader !== null) ? !!config.hideHeader : !!hideHeader;
   let progressiveModeOn = !!config.progressiveModeEnabled;
   let currentLevel = Math.max(0, Math.min(4, config.progressiveLevel || 0));
   let currentChunkIdx = config.progressiveChunk || 0;
