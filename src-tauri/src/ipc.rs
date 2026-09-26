@@ -24,6 +24,7 @@ const ALLOWED_QURAN_KEYS: &[&str] = &[
     "dayStartHour",
     "fontSizePx",
     "hideHeader",
+    "hide_header",
     "lastCompletedDate",
     "lastCompletedTime",
     "lastRecentReviewDate",
@@ -225,15 +226,33 @@ pub fn q_show_now(app: AppHandle) {
 
 #[tauri::command]
 pub fn q_store_get(store: State<'_, ConfigStore>, keys: Value) -> Value {
-    let q = store.quran_get();
+    let mut q = store.quran_get();
+    if let Some(obj) = q.as_object_mut() {
+        if let Some(v) = obj.get("hideHeader").cloned().or_else(|| obj.get("hide_header").cloned()) {
+            obj.insert("hideHeader".to_string(), v.clone());
+            obj.insert("hide_header".to_string(), v);
+        }
+    }
     if keys.is_null() {
         return q;
     }
+    let resolve_q_val = |k: &str| -> Option<Value> {
+        q.get(k).cloned().or_else(|| {
+            if k == "hideHeader" {
+                q.get("hide_header").cloned()
+            } else if k == "hide_header" {
+                q.get("hideHeader").cloned()
+            } else {
+                None
+            }
+        })
+    };
+
     if let Some(arr) = keys.as_array() {
         let mut out = serde_json::Map::new();
         for k in arr {
             if let Some(s) = k.as_str() {
-                out.insert(s.to_string(), q.get(s).cloned().unwrap_or(Value::Null));
+                out.insert(s.to_string(), resolve_q_val(s).unwrap_or(Value::Null));
             }
         }
         return Value::Object(out);
@@ -241,7 +260,7 @@ pub fn q_store_get(store: State<'_, ConfigStore>, keys: Value) -> Value {
     if let Some(obj) = keys.as_object() {
         let mut out = serde_json::Map::new();
         for (k, default_v) in obj {
-            let v = q.get(k).cloned();
+            let v = resolve_q_val(k);
             // Treat stored `null` the same as missing — fall back to caller's default.
             let resolved = match v {
                 Some(Value::Null) | None => default_v.clone(),
@@ -253,7 +272,7 @@ pub fn q_store_get(store: State<'_, ConfigStore>, keys: Value) -> Value {
     }
     if let Some(s) = keys.as_str() {
         let mut out = serde_json::Map::new();
-        out.insert(s.to_string(), q.get(s).cloned().unwrap_or(Value::Null));
+        out.insert(s.to_string(), resolve_q_val(s).unwrap_or(Value::Null));
         return Value::Object(out);
     }
     q
@@ -377,11 +396,22 @@ pub fn q_set_pages_per_session(
 }
 
 fn broadcast_quran_changed(app: &AppHandle, changed: &Value) {
+    let mut payload = changed.clone();
+    if let Some(obj) = payload.as_object_mut() {
+        if let Some(v) = obj.get("hideHeader").cloned().or_else(|| obj.get("hide_header").cloned()) {
+            obj.insert("hideHeader".to_string(), v.clone());
+            obj.insert("hide_header".to_string(), v);
+        }
+    }
+    let _ = app.emit("q_store_changed", &payload);
+    let _ = app.emit("q:store:changed", &payload);
     if let Some(w) = app.get_webview_window(windows::QURAN_LABEL) {
-        let _ = w.emit("q_store_changed", changed);
+        let _ = w.emit("q_store_changed", &payload);
+        let _ = w.emit("q:store:changed", &payload);
     }
     if let Some(w) = app.get_webview_window(windows::SETTINGS_LABEL) {
-        let _ = w.emit("q_store_changed", changed);
+        let _ = w.emit("q_store_changed", &payload);
+        let _ = w.emit("q:store:changed", &payload);
     }
 }
 

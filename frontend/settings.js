@@ -528,9 +528,10 @@ if (window.api && window.api.receive) {
         : changes.progressiveModeEnabled;
       if (chk) chk.checked = !!val;
     }
-    if (changes.hideHeader !== undefined) {
+    if (changes.hideHeader !== undefined || changes.hide_header !== undefined) {
       const chk = document.getElementById('quranHideHeader');
-      const val = (changes.hideHeader && typeof changes.hideHeader === 'object' && changes.hideHeader.newValue !== undefined) ? changes.hideHeader.newValue : changes.hideHeader;
+      const raw = changes.hideHeader !== undefined ? changes.hideHeader : changes.hide_header;
+      const val = (raw && typeof raw === 'object' && raw.newValue !== undefined) ? raw.newValue : raw;
       if (chk) chk.checked = !!val;
     }
   });

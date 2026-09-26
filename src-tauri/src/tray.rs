@@ -69,7 +69,9 @@ fn handle_pause(app: &AppHandle, ts: i64) {
             crate::windows::destroy_widget(app);
         }
         refresh(app, &store, &data);
-        let _ = app.emit("q:store:changed", serde_json::json!({ "pausedUntil": ts }));
+        let payload = serde_json::json!({ "pausedUntil": ts });
+        let _ = app.emit("q_store_changed", &payload);
+        let _ = app.emit("q:store:changed", &payload);
     }
 }
 

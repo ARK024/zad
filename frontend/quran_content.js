@@ -356,11 +356,13 @@ function bindHeaderToggle(collapsedBar, collapseBtn, headerEl, expandBtn) {
   const expandAction = async (e) => {
     if (e) e.stopPropagation();
     if (headerEl) {
-      headerEl.style.display = 'flex';
+      headerEl.style.setProperty('display', 'flex', 'important');
       headerEl.classList.remove('hdr-collapsing');
       headerEl.classList.add('hdr-expanding');
     }
-    if (collapsedBar) collapsedBar.style.display = 'none';
+    if (collapsedBar) {
+      collapsedBar.style.setProperty('display', 'none', 'important');
+    }
     try {
       await window.api.invoke('q:store:set', { hideHeader: false });
     } catch (err) {
@@ -374,10 +376,12 @@ function bindHeaderToggle(collapsedBar, collapseBtn, headerEl, expandBtn) {
       headerEl.classList.add('hdr-collapsing');
       headerEl.classList.remove('hdr-expanding');
       // انتظر الـ animation قبل الإخفاء
-      setTimeout(() => { headerEl.style.display = 'none'; }, 180);
+      setTimeout(() => {
+        headerEl.style.setProperty('display', 'none', 'important');
+      }, 180);
     }
     if (collapsedBar) {
-      collapsedBar.style.display = 'flex';
+      collapsedBar.style.setProperty('display', 'flex', 'important');
       collapsedBar.classList.add('hdr-bar-in');
     }
     try {
@@ -389,12 +393,6 @@ function bindHeaderToggle(collapsedBar, collapseBtn, headerEl, expandBtn) {
 
   const actualExpandBtn = expandBtn || collapsedBar?.querySelector('.quran-widget-header-btn');
   actualExpandBtn?.addEventListener('click', expandAction);
-  // النقر المزدوج على الشريط المطوي يفتحه، بينما النقر العادي للسحب/التركيز دون فتح بالخطأ
-  collapsedBar?.addEventListener('dblclick', (e) => {
-    // تجنب التفعيل عند الضغط على الزر نفسه (يتولاه expandAction)
-    if (e.target.closest('.quran-widget-header-btn')) return;
-    expandAction(e);
-  });
   collapseBtn?.addEventListener('click', collapseAction);
 }
 
@@ -481,7 +479,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   const testBtnHtml = `<button class="quran-widget-test-btn${testModeOn ? ' active' : ''}" id="quran-test-toggle" title="وضع الاختبار">👁️</button>`;
 
   const fullHeader = `
-    <div class="quran-widget-header quran-widget-recent-header" id="quran-recent-header-content" style="${isHeaderHidden ? 'display:none;' : 'display:flex;'}">
+    <div class="quran-widget-header quran-widget-recent-header" id="quran-recent-header-content" style="${isHeaderHidden ? 'display:none !important;' : 'display:flex !important;'}">
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">⚡ قريب - سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
@@ -503,7 +501,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
         </div>
       </div>
     </div>
-    <div class="quran-widget-header-collapsed recent" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
+    <div class="quran-widget-header-collapsed recent" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex !important;' : 'display:none !important;'}">
       <span>⚡ ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span></span>
       <button class="quran-widget-header-btn" id="quran-recent-header-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -841,7 +839,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
   const testBtnHtml = `<button class="quran-widget-test-btn${testModeOn ? ' active' : ''}" id="quran-test-toggle" title="وضع الاختبار">👁️</button>`;
 
   const fullHeader = `
-    <div class="quran-widget-header quran-widget-distant-header" id="quran-review-header-content" style="${isHeaderHidden ? 'display:none;' : 'display:flex;'}">
+    <div class="quran-widget-header quran-widget-distant-header" id="quran-review-header-content" style="${isHeaderHidden ? 'display:none !important;' : 'display:flex !important;'}">
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📅 بعيد - سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
@@ -863,7 +861,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
         </div>
       </div>
     </div>
-    <div class="quran-widget-header-collapsed distant" id="quran-review-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
+    <div class="quran-widget-header-collapsed distant" id="quran-review-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex !important;' : 'display:none !important;'}">
       <span>🔄 ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span></span>
       <button class="quran-widget-header-btn" id="quran-review-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -1280,7 +1278,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       : 'جديدة';
 
   const fullHeaderHtml = `
-    <div class="quran-widget-header" id="quran-header-content" style="${isHeaderHidden ? 'display:none;' : 'display:flex;'}">
+    <div class="quran-widget-header" id="quran-header-content" style="${isHeaderHidden ? 'display:none !important;' : 'display:flex !important;'}">
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📖 سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
@@ -1302,7 +1300,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
         </div>
       </div>
     </div>
-    <div class="quran-widget-header-collapsed" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex;' : 'display:none;'}">
+    <div class="quran-widget-header-collapsed" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex !important;' : 'display:none !important;'}">
       <span>📖 سورة ${surahTitle} — صفحة <span class="collapsed-page-num">${pageNumber}</span></span>
       <button class="quran-widget-header-btn" id="quran-header-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -1558,8 +1556,9 @@ window.api.receive('q:store:changed', (changes) => {
       }
     }
 
-    if (changes.hideHeader !== undefined) {
-      const val = (changes.hideHeader && typeof changes.hideHeader === 'object' && changes.hideHeader.newValue !== undefined) ? changes.hideHeader.newValue : changes.hideHeader;
+    if (changes.hideHeader !== undefined || changes.hide_header !== undefined) {
+      const raw = changes.hideHeader !== undefined ? changes.hideHeader : changes.hide_header;
+      const val = (raw && typeof raw === 'object' && raw.newValue !== undefined) ? raw.newValue : raw;
       const isHidden = !!val;
       const widget = document.getElementById('quran-memorization-widget');
       if (widget) {
@@ -1567,8 +1566,8 @@ window.api.receive('q:store:changed', (changes) => {
         const headerEl = widget.querySelector('.quran-widget-header, #quran-header-content, #quran-recent-header-content, #quran-review-header-content');
         // الشريط المطوي (كل أنواع الويدجت — قريب وبعيد وعادي)
         const toggleBtn = widget.querySelector('.quran-widget-header-collapsed, #quran-header-toggle, #quran-review-toggle, #quran-recent-collapse-toggle');
-        if (headerEl) headerEl.style.display = isHidden ? 'none' : 'flex';
-        if (toggleBtn) toggleBtn.style.display = isHidden ? 'flex' : 'none';
+        if (headerEl) headerEl.style.setProperty('display', isHidden ? 'none' : 'flex', 'important');
+        if (toggleBtn) toggleBtn.style.setProperty('display', isHidden ? 'flex' : 'none', 'important');
       }
     }
   } catch (e) {

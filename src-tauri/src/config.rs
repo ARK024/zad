@@ -137,6 +137,7 @@ pub struct QuranConfig {
     pub recent_review_enabled: Option<bool>,
     pub review_days: Option<i64>,
     pub review_pages_per_session: Option<i64>,
+    #[serde(alias = "hide_header")]
     pub hide_header: Option<bool>,
     pub memorized_pages: Option<Vec<i64>>,
     pub preloaded_pages: Option<Vec<i64>>,
@@ -581,7 +582,7 @@ impl ConfigStore {
             "recentReviewEnabled" => q.recent_review_enabled = to_bool(&value),
             "reviewDays" => q.review_days = value.as_i64(),
             "reviewPagesPerSession" => q.review_pages_per_session = value.as_i64(),
-            "hideHeader" => q.hide_header = to_bool(&value),
+            "hideHeader" | "hide_header" => q.hide_header = to_bool(&value),
             "memorizedPages" => {
                 if let Some(arr) = value.as_array() {
                     q.memorized_pages = Some(arr.iter().filter_map(|v| v.as_i64()).collect());
@@ -661,7 +662,7 @@ impl ConfigStore {
                     "recentReviewEnabled" => q.recent_review_enabled = to_bool(v),
                     "reviewDays" => q.review_days = v.as_i64(),
                     "reviewPagesPerSession" => q.review_pages_per_session = v.as_i64(),
-                    "hideHeader" => q.hide_header = to_bool(v),
+                    "hideHeader" | "hide_header" => q.hide_header = to_bool(v),
                     "memorizedPages" => {
                         if let Some(arr) = v.as_array() {
                             q.memorized_pages = Some(arr.iter().filter_map(|x| x.as_i64()).collect());
@@ -733,7 +734,7 @@ impl ConfigStore {
             "recentReviewEnabled" => q.recent_review_enabled.take().is_some(),
             "reviewDays" => q.review_days.take().is_some(),
             "reviewPagesPerSession" => q.review_pages_per_session.take().is_some(),
-            "hideHeader" => q.hide_header.take().is_some(),
+            "hideHeader" | "hide_header" => q.hide_header.take().is_some(),
             "memorizedPages" => q.memorized_pages.take().is_some(),
             "preloadedPages" => q.preloaded_pages.take().is_some(),
             "dailyStreak" => q.daily_streak.take().is_some(),
@@ -864,5 +865,13 @@ mod tests {
         let serialized = serde_json::to_string(&snapshot).unwrap();
         let deserialized: QuranConfig = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized.hide_header, Some(true));
+
+        // Test snake_case deserialization alias
+        let from_snake: QuranConfig = serde_json::from_str(r#"{"hide_header": true}"#).unwrap();
+        assert_eq!(from_snake.hide_header, Some(true));
+
+        // Test snake_case quran_set
+        s.quran_set("hide_header", json!(false));
+        assert_eq!(s.quran.lock().hide_header, Some(false));
     }
 }
