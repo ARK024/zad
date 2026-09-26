@@ -310,6 +310,39 @@
   background: linear-gradient(135deg, var(--h-dist-from), var(--h-dist-to)) !important;
 }
 
+/* انيميشن دخول الشريط المطوي */
+@keyframes barSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.quran-widget-header-collapsed.hdr-bar-in {
+  animation: barSlideIn 0.18s ease forwards;
+}
+
+/* انيميشن طي الهدر */
+@keyframes hdrCollapse {
+  from { opacity: 1; transform: translateY(0) scaleY(1); }
+  to   { opacity: 0; transform: translateY(-6px) scaleY(0.85); }
+}
+
+/* انيميشن توسيع الهدر */
+@keyframes hdrExpand {
+  from { opacity: 0; transform: translateY(-6px) scaleY(0.85); }
+  to   { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+.quran-widget-header.hdr-collapsing {
+  animation: hdrCollapse 0.18s ease forwards;
+  transform-origin: top center;
+  overflow: hidden;
+}
+
+.quran-widget-header.hdr-expanding {
+  animation: hdrExpand 0.2s ease forwards;
+  transform-origin: top center;
+}
+
 .quran-widget-header-collapsed .collapsed-page-num {
   font-size: 15px;
   font-weight: 800;
