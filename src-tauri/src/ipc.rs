@@ -216,6 +216,11 @@ pub fn q_window_hide(app: AppHandle) {
     windows::hide_quran_window(&app);
 }
 
+#[tauri::command]
+pub fn q_show_now(app: AppHandle) {
+    windows::show_quran_window(&app);
+}
+
 // ── Quran Storage ──────────────────────────────────────────────────────────
 
 #[tauri::command]

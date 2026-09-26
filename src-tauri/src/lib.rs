@@ -301,6 +301,7 @@ pub fn run() {
             ipc::widget_ready,
             ipc::q_window_show,
             ipc::q_window_hide,
+            ipc::q_show_now,
             ipc::q_store_get,
             ipc::q_store_set,
             ipc::q_store_remove,

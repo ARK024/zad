@@ -215,10 +215,64 @@ gid('btnSave').addEventListener('click', async () => {
   }
 });
 
+// Quran actions
+gid('btnShowQuranNow')?.addEventListener('click', async () => {
+  try {
+    const qData = {
+      widgetSize: gid('quranWidgetSize').value,
+      fontSizePx: parseInt(gid('quranFontSize').value, 10) || 26,
+      hideHeader: gid('quranHideHeader').checked,
+      progressiveModeEnabled: gid('quranProgressiveMode').checked,
+      audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
+      audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
+      audioRepeatCount: parseInt(gid('quranAudioRepeatCount')?.value, 10) || 1,
+      audioAutoPlay: gid('quranAudioAutoPlay')?.checked || false,
+    };
+    await window.api.invoke('q:store:set', qData);
+    if (window.S && window.S.showQuranNow) {
+      await window.S.showQuranNow();
+    } else {
+      await window.api.invoke('q_show_now');
+    }
+    showStatus('📖 تم عرض نافذة القرآن الكريم');
+  } catch (e) {
+    console.error('Failed to show Quran window:', e);
+    showStatus('تعذر عرض نافذة القرآن', false);
+  }
+});
+
 // Hadith actions
-gid('btnShowNow').addEventListener('click', () => {
-  S.showNow();
-  showStatus('📖 تم عرض الحديث');
+gid('btnShowNow')?.addEventListener('click', async () => {
+  const isQuranTabActive = document.getElementById('tab-quran')?.classList.contains('active');
+  const isQuranOnly = gid('selAppMode')?.value === 'quranOnly';
+
+  if (isQuranTabActive || isQuranOnly) {
+    try {
+      const qData = {
+        widgetSize: gid('quranWidgetSize').value,
+        fontSizePx: parseInt(gid('quranFontSize').value, 10) || 26,
+        hideHeader: gid('quranHideHeader').checked,
+        progressiveModeEnabled: gid('quranProgressiveMode').checked,
+        audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
+        audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
+        audioRepeatCount: parseInt(gid('quranAudioRepeatCount')?.value, 10) || 1,
+        audioAutoPlay: gid('quranAudioAutoPlay')?.checked || false,
+      };
+      await window.api.invoke('q:store:set', qData);
+      if (window.S && window.S.showQuranNow) {
+        await window.S.showQuranNow();
+      } else {
+        await window.api.invoke('q_show_now');
+      }
+      showStatus('📖 تم عرض نافذة القرآن الكريم');
+    } catch (e) {
+      console.error('Failed to show Quran window:', e);
+      showStatus('تعذر عرض نافذة القرآن', false);
+    }
+  } else {
+    S.showNow();
+    showStatus('📖 تم عرض الحديث');
+  }
 });
 
 gid('btnReset').addEventListener('click', async () => {

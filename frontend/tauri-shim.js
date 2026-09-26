@@ -97,6 +97,14 @@
     backup: () => invoke('s_backup'),
     restore: () => invoke('s_restore'),
     resetGeometry: () => invoke('s_reset_geometry'),
+    showQuranNow: () => invoke('q_show_now'),
+  };
+
+  // Quran bridge — used across renderer windows.
+  window.Q = {
+    showNow: () => invoke('q_show_now'),
+    hide: () => invoke('q_window_hide'),
+    show: () => invoke('q_window_show'),
   };
 
   // Welcome bridge — used by welcome.js.
