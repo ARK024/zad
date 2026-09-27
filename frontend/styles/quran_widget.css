@@ -699,13 +699,19 @@
   gap: 4px;
   flex-wrap: nowrap;
   overflow-x: auto;
+  scrollbar-width: none;
   -webkit-app-region: no-drag;
+}
+
+.quran-prog-row::-webkit-scrollbar {
+  display: none;
 }
 
 .quran-prog-pills {
   display: flex;
   align-items: center;
   gap: 3px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
@@ -719,6 +725,7 @@
   cursor: pointer;
   transition: all .15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
@@ -745,6 +752,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
@@ -757,59 +765,123 @@
 .test-word {
   display: inline-block;
   vertical-align: baseline;
-  transition: filter .2s cubic-bezier(.4, 0, .2, 1), opacity .2s, background-color .2s;
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
 }
 
 .test-word.masked-word {
   display: inline-block !important;
-  filter: blur(8px) !important;
-  opacity: 0.35 !important;
-  user-select: none;
-  cursor: pointer;
-  border-radius: 3px;
-  background-color: rgba(0, 0, 0, 0.05);
+  color: transparent !important;
+  text-shadow: 0 0 14px currentColor !important;
+  background-color: rgba(26, 152, 80, 0.12) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.28) !important;
+  border-radius: 4px !important;
+  padding: 0 3px !important;
+  margin: 0 1.5px !important;
+  user-select: none !important;
+  cursor: pointer !important;
+  filter: blur(4px) !important;
+  vertical-align: baseline;
 }
 
 .test-word.masked-word:hover:not(.revealed) {
-  opacity: 0.65 !important;
-  filter: blur(5px) !important;
+  text-shadow: 0 0 9px currentColor !important;
+  background-color: rgba(26, 152, 80, 0.22) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.45) !important;
 }
 
 .test-word.masked-word.revealed {
+  color: inherit !important;
+  text-shadow: none !important;
   filter: none !important;
-  opacity: 1 !important;
-  background-color: rgba(26, 152, 80, .14) !important;
+  background-color: rgba(26, 152, 80, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.5) !important;
 }
 
+/* Level 4: غيباً (إخفاء كامل بدون تلميح نصي للتسميع) */
+.test-level-4 .test-word.masked-word:not(.revealed) {
+  color: transparent !important;
+  text-shadow: none !important;
+  filter: none !important;
+  background-color: rgba(26, 152, 80, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.35) !important;
+}
+
+.test-level-4 .test-word.masked-word:not(.revealed):hover {
+  text-shadow: 0 0 12px currentColor !important;
+  background-color: rgba(26, 152, 80, 0.26) !important;
+}
+
+/* Level 3: مفاتيح (الحرف الأول واضح والباقي مخفي) */
 .test-word.keys-mode {
   display: inline-block !important;
-  cursor: pointer;
+  cursor: pointer !important;
+  vertical-align: baseline;
+  border-radius: 4px;
+  padding: 0 2px;
+  margin: 0 1px;
+  background-color: rgba(26, 152, 80, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.2);
+  transition: all .2s ease;
 }
 
 .test-word.keys-mode .head-text {
   display: inline-block !important;
-  font-weight: bold;
-  opacity: .95;
+  font-weight: 800 !important;
+  color: var(--accent, #1a9850) !important;
 }
 
 .test-word.keys-mode .tail-text {
   display: inline-block !important;
-  filter: blur(7px) !important;
-  opacity: 0.35 !important;
-  transition: filter .2s ease, opacity .2s ease;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 2px;
+  color: transparent !important;
+  text-shadow: 0 0 11px currentColor !important;
+  filter: blur(4px) !important;
+  background-color: rgba(26, 152, 80, 0.08) !important;
+  border-radius: 3px;
 }
 
 .test-word.keys-mode:hover:not(.revealed) .tail-text {
-  opacity: 0.65 !important;
-  filter: blur(4px) !important;
+  text-shadow: 0 0 7px currentColor !important;
+}
+
+.test-word.keys-mode.revealed {
+  background-color: rgba(26, 152, 80, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.5) !important;
+}
+
+.test-word.keys-mode.revealed .head-text {
+  color: inherit !important;
+  font-weight: inherit !important;
 }
 
 .test-word.keys-mode.revealed .tail-text {
+  color: inherit !important;
+  text-shadow: none !important;
   filter: none !important;
-  opacity: 1 !important;
-  background-color: rgba(26, 152, 80, .14) !important;
+  background-color: transparent !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .test-word.masked-word {
+    background-color: rgba(77, 182, 172, 0.16) !important;
+    box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.32) !important;
+  }
+  .test-word.masked-word:hover:not(.revealed) {
+    background-color: rgba(77, 182, 172, 0.26) !important;
+  }
+  .test-word.masked-word.revealed {
+    background-color: rgba(77, 182, 172, 0.2) !important;
+  }
+  .test-level-4 .test-word.masked-word:not(.revealed) {
+    background-color: rgba(77, 182, 172, 0.18) !important;
+    box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.4) !important;
+  }
+  .test-word.keys-mode {
+    background-color: rgba(77, 182, 172, 0.1) !important;
+    box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.25) !important;
+  }
+  .test-word.keys-mode.revealed {
+    background-color: rgba(77, 182, 172, 0.22) !important;
+  }
 }
 
 /* ─── Quran Ayah Interactive Highlighting & Audio Unit ─── */

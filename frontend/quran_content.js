@@ -1077,7 +1077,7 @@ function createChunks(ayahs, fullText, ayahDetails = []) {
 
   if (ayahs.length === 1) {
     const words = ayahs[0].split(/\s+/);
-    if (words.length > 35) {
+    if (words.length >= 10) {
       const parts = ayahs[0].split(/([ۚۖۗۘۙۜ])/);
       const singleDetail = (ayahDetails && ayahDetails[0]) ? ayahDetails[0] : { surah: 0, ayah: 0 };
       if (parts.length >= 3) {
@@ -1457,15 +1457,22 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     widget.querySelectorAll('#quran-prog-chunks .quran-prog-pill').forEach(p => {
       p.classList.toggle('active', parseInt(p.dataset.chunk, 10) === currentChunkIdx);
     });
-    const activeText = progressiveModeOn ? chunks[currentChunkIdx].text : ayahTextHtml;
-    const activeLvl = progressiveModeOn ? currentLevel : 0;
-    const activeAyahList = progressiveModeOn ? (chunks[currentChunkIdx].ayahs || ayahDetails) : ayahDetails;
-    renderAyahTextWithMasks(ayahContainerEl, activeText, activeLvl, activeAyahList);
+
+    const isProgActive = progressiveModeOn || currentLevel > 0 || currentChunkIdx > 0;
+    const safeChunkIdx = Math.min(currentChunkIdx, chunks.length - 1);
+    const activeText = (isProgActive && chunks[safeChunkIdx]) ? chunks[safeChunkIdx].text : ayahTextHtml;
+    const activeLvl = isProgActive ? currentLevel : 0;
+    const activeAyahList = (isProgActive && chunks[safeChunkIdx]) ? (chunks[safeChunkIdx].ayahs || ayahDetails) : ayahDetails;
+
+    if (ayahContainerEl) {
+      ayahContainerEl.className = 'quran-ayah-content test-level-' + activeLvl;
+      renderAyahTextWithMasks(ayahContainerEl, activeText, activeLvl, activeAyahList);
+    }
     QuranAudioPlayer.setPlaylist(activeAyahList, repeatCount, reciterId);
 
     const nextAyahEl = widget.querySelector('.quran-widget-next-ayah');
     if (nextAyahEl) {
-      const isLastChunkOrFull = !progressiveModeOn || currentChunkIdx === 0 || currentChunkIdx === (chunks.length - 1);
+      const isLastChunkOrFull = !isProgActive || safeChunkIdx === 0 || safeChunkIdx === (chunks.length - 1);
       nextAyahEl.style.display = isLastChunkOrFull ? '' : 'none';
     }
   }
@@ -1520,14 +1527,30 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       currentLevel = parseInt(btn.dataset.lvl, 10) || 0;
+      if (!progressiveModeOn && currentLevel > 0) {
+        progressiveModeOn = true;
+        widget.querySelectorAll('.quran-widget-mode-btn').forEach(b => {
+          b.classList.add('active');
+          b.textContent = '🧩 متدرج';
+        });
+        await window.api.invoke('q:store:set', { progressiveModeEnabled: true });
+      }
       updateProgressiveUI();
       await window.api.invoke('q:store:set', { progressiveLevel: currentLevel });
     });
   });
 
-  // زر المستوى التالي
+  // زر المستوى أو المقطع التالي
   widget.querySelector('#quran-prog-next-lvl')?.addEventListener('click', async (e) => {
     e.stopPropagation();
+    if (!progressiveModeOn) {
+      progressiveModeOn = true;
+      widget.querySelectorAll('.quran-widget-mode-btn').forEach(b => {
+        b.classList.add('active');
+        b.textContent = '🧩 متدرج';
+      });
+      await window.api.invoke('q:store:set', { progressiveModeEnabled: true });
+    }
     if (currentLevel < 4) {
       currentLevel++;
     } else if (chunks.length > 1 && currentChunkIdx < chunks.length - 1) {
@@ -1542,7 +1565,8 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     updateProgressiveUI();
     await window.api.invoke('q:store:set', {
       progressiveLevel: currentLevel,
-      progressiveChunk: currentChunkIdx
+      progressiveChunk: currentChunkIdx,
+      progressiveModeEnabled: true
     });
   });
 
@@ -1551,6 +1575,14 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       currentChunkIdx = parseInt(btn.dataset.chunk, 10) || 0;
+      if (!progressiveModeOn && currentChunkIdx > 0) {
+        progressiveModeOn = true;
+        widget.querySelectorAll('.quran-widget-mode-btn').forEach(b => {
+          b.classList.add('active');
+          b.textContent = '🧩 متدرج';
+        });
+        await window.api.invoke('q:store:set', { progressiveModeEnabled: true });
+      }
       updateProgressiveUI();
       await window.api.invoke('q:store:set', { progressiveChunk: currentChunkIdx });
     });
