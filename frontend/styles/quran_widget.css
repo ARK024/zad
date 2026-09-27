@@ -30,12 +30,17 @@
   --h-rec-from: #92690a;
   --h-rec-to: #a07808;
 
+  /* الهدر — تحضير مسبق (تركوازي زمردي) */
+  --h-prep-from: #0f766e;
+  --h-prep-to: #0d9488;
+
   /* ألوان الأزرار */
   --btn-read: #64748b; /* button hide/read */
   --btn-done: #1a9850;
   --btn-skip: #8b6914;
   --btn-distant: #2563eb;
   --btn-recent: #a07808;
+  --btn-prep: #0d9488;
 
   --footer-bg: #f7faf8;
   --footer-bg-dark: #1d2d26;
@@ -148,6 +153,10 @@
   background: linear-gradient(135deg, var(--h-rec-from), var(--h-rec-to)) !important;
 }
 
+.quran-widget-prep-header {
+  background: linear-gradient(135deg, var(--h-prep-from), var(--h-prep-to)) !important;
+}
+
 /* ─── Header top row ─── */
 .quran-widget-header-top {
   display: flex;
@@ -254,6 +263,10 @@
   background: linear-gradient(90deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, .85)) !important;
 }
 
+.quran-widget-prep-bar {
+  background: linear-gradient(90deg, rgba(255, 255, 255, .6), rgba(255, 255, 255, .95)) !important;
+}
+
 .quran-widget-progress-row {
   display: flex;
   justify-content: space-between;
@@ -339,6 +352,10 @@
 
 .quran-widget-header-collapsed.distant {
   background: linear-gradient(135deg, var(--h-dist-from), var(--h-dist-to)) !important;
+}
+
+.quran-widget-header-collapsed.prep {
+  background: linear-gradient(135deg, var(--h-prep-from), var(--h-prep-to)) !important;
 }
 
 /* انيميشن دخول الشريط المطوي */
@@ -565,6 +582,37 @@
 .quran-widget-btn-done-recent {
   background: linear-gradient(135deg, #92690a, var(--btn-recent));
   box-shadow: 0 2px 8px rgba(234, 179, 8, .2);
+}
+
+.quran-widget-btn-done-prep {
+  background: linear-gradient(135deg, #0f766e, var(--btn-prep));
+  box-shadow: 0 2px 8px rgba(13, 148, 136, .25);
+}
+
+.quran-widget-page-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 18px 0 14px;
+  font-family: 'Amiri', serif;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--accent);
+  opacity: 0.9;
+  user-select: none;
+  border-top: 1px dashed rgba(26, 152, 80, 0.35);
+  border-bottom: 1px dashed rgba(26, 152, 80, 0.35);
+  padding: 4px 0;
+  background: rgba(26, 152, 80, 0.04);
+  border-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .quran-widget-page-divider {
+    color: #4db6ac;
+    border-color: rgba(77, 182, 172, 0.3);
+    background: rgba(77, 182, 172, 0.05);
+  }
 }
 
 /* ─── Success overlay ─── */

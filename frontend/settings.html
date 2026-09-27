@@ -167,6 +167,37 @@
         </div>
       </div>
       <div class="card">
+        <div class="card-head">📑 وضع القراءة التحضيرية (التحضير المسبق)</div>
+        <div class="card-body">
+          <div class="field">
+            <div class="tog-row">
+              <span class="tog-lbl">تفعيل القراءة التحضيرية <span class="tog-desc">قراءة صفحات مستقبلية وتكرارها بعد إتمام ورد الحفظ اليومي لتسهيل حفظها</span></span>
+              <label class="switch"><input type="checkbox" id="quranPrepModeEnabled"><span class="knob"></span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label>إجمالي صفحات التحضير القادمة</label>
+            <input type="number" id="quranPrepPagesCount" min="1" max="50" value="10">
+            <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">عدد الصفحات المستقبلية التي تود تحضيرها (افتراضياً 10 صفحات)</small>
+          </div>
+          <div class="field">
+            <label>عدد الصفحات في كل جلسة (ظهور في الويدجت)</label>
+            <input type="number" id="quranPrepPagesPerSession" min="1" max="10" value="2">
+            <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">تقسيم ورد التحضير على جلسات (مثلاً صفحتين في كل ظهور)</small>
+          </div>
+          <div class="field">
+            <label>عدد جولات تكرار الورد كاملاً</label>
+            <input type="number" id="quranPrepCyclesCount" min="1" max="10" value="1">
+            <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">تكرار قراءة الورد كاملاً أكثر من مرة (مثلاً جولة واحدة أو أكثر)</small>
+          </div>
+          <div class="field" style="margin-top:8px;">
+            <button class="btn-sec sm" id="btnRestartPrepCycles" type="button" style="width:100%;font-size:12px;font-weight:bold;">
+              🔁 إعادة بدء ورد التحضير لليوم من الجولة الأولى
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-head">🔊 التلاوة والصوتيات القرآنية</div>
         <div class="card-body">
           <div class="field">

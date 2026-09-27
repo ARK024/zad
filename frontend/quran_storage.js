@@ -594,5 +594,143 @@ const StorageManager = {
     await this.unmemorizePage(pageToUndo);
     await window.api.invoke('q:store:set', { currentQuranPage: pageToUndo });
     return { success: true, page: pageToUndo };
+  },
+
+  // ─── وضع القراءة التحضيرية (التحضير المسبق) ──────────────────────────────────
+  async getTodayPrepData() {
+    const data = await window.api.invoke('q:store:get', {
+      prepModeEnabled: false,
+      prepPagesCount: 10,
+      prepPagesPerSession: 2,
+      prepCyclesCount: 1,
+      prepSessionIndex: 0,
+      prepCurrentCycle: 1,
+      prepLastDate: '',
+      currentQuranPage: 1
+    });
+
+    const today = this.getTodayDate();
+    let currentIndex = parseInt(data.prepSessionIndex, 10) || 0;
+    let currentCycle = parseInt(data.prepCurrentCycle, 10) || 1;
+    const totalCycles = Math.max(1, parseInt(data.prepCyclesCount, 10) || 1);
+    const totalPages = Math.max(1, parseInt(data.prepPagesCount, 10) || 10);
+    const pagesPerSession = Math.max(1, parseInt(data.prepPagesPerSession, 10) || 2);
+
+    // إذا بدأ يوم جديد، نعيد ضبط رقم الجلسة والجولة
+    if (data.prepLastDate !== today) {
+      currentIndex = 0;
+      currentCycle = 1;
+      await window.api.invoke('q:store:set', {
+        prepSessionIndex: 0,
+        prepCurrentCycle: 1,
+        prepLastDate: today
+      });
+    }
+
+    // حساب الصفحات المستقبلية بدءاً من الصفحة الحالية (currentQuranPage) مع تخطي المحفوظ
+    const memorized = await this.getAllMemorizedPages();
+    const memorizedSet = new Set(memorized);
+
+    const startPage = data.currentQuranPage || 1;
+    const prepPages = [];
+    let p = startPage;
+    let checkedCount = 0;
+    while (prepPages.length < totalPages && checkedCount < 604) {
+      if (!memorizedSet.has(p)) {
+        prepPages.push(p);
+      }
+      p = p >= 604 ? 1 : p + 1;
+      checkedCount++;
+    }
+
+    // احتياطاً إذا كان المستخدم حافظاً للمصحف بالكامل تقريباً
+    if (prepPages.length === 0) {
+      let fallbackP = startPage;
+      for (let i = 0; i < totalPages; i++) {
+        prepPages.push(fallbackP);
+        fallbackP = fallbackP >= 604 ? 1 : fallbackP + 1;
+      }
+    }
+
+    return {
+      enabled: !!data.prepModeEnabled,
+      pages: prepPages,
+      currentIndex,
+      currentCycle,
+      totalCycles,
+      pagesPerSession,
+      totalPages: prepPages.length,
+      allDone: currentCycle > totalCycles
+    };
+  },
+
+  async incrementPrepSession(count = 0) {
+    const data = await window.api.invoke('q:store:get', {
+      prepSessionIndex: 0,
+      prepCurrentCycle: 1,
+      prepCyclesCount: 1,
+      prepPagesCount: 10,
+      prepPagesPerSession: 2
+    });
+
+    const totalPages = Math.max(1, parseInt(data.prepPagesCount, 10) || 10);
+    const totalCycles = Math.max(1, parseInt(data.prepCyclesCount, 10) || 1);
+    const pps = Math.max(1, parseInt(data.prepPagesPerSession, 10) || 2);
+    const step = count > 0 ? count : pps;
+
+    let newIndex = (data.prepSessionIndex || 0) + step;
+    let newCycle = data.prepCurrentCycle || 1;
+    let allDone = false;
+
+    if (newIndex >= totalPages) {
+      // انتهت جولة القراءة الحالية
+      if (newCycle < totalCycles) {
+        newCycle += 1;
+        newIndex = 0;
+      } else {
+        newCycle = totalCycles + 1;
+        newIndex = totalPages;
+        allDone = true;
+      }
+    }
+
+    await window.api.invoke('q:store:set', {
+      prepSessionIndex: newIndex,
+      prepCurrentCycle: newCycle,
+      prepLastDate: this.getTodayDate()
+    });
+
+    return {
+      newIndex,
+      newCycle,
+      totalCycles,
+      allDone
+    };
+  },
+
+  async restartPrepCycles() {
+    await window.api.invoke('q:store:set', {
+      prepSessionIndex: 0,
+      prepCurrentCycle: 1,
+      prepLastDate: this.getTodayDate()
+    });
+    return true;
+  },
+
+  async addExtraPrepCycle() {
+    const data = await window.api.invoke('q:store:get', {
+      prepCyclesCount: 1,
+      prepCurrentCycle: 1
+    });
+    const currentTotal = Math.max(1, parseInt(data.prepCyclesCount, 10) || 1);
+    const newCyclesCount = currentTotal + 1;
+    const newCycle = currentTotal + 1;
+    await window.api.invoke('q:store:set', {
+      prepCyclesCount: newCyclesCount,
+      prepCurrentCycle: newCycle,
+      prepSessionIndex: 0,
+      prepLastDate: this.getTodayDate()
+    });
+    return { newCyclesCount, newCycle };
   }
 };

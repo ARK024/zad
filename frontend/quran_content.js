@@ -674,6 +674,300 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   });
 }
 
+// ─── وضع القراءة التحضيرية (التحضير المسبق) ──────────────────────────────────
+async function showPrepPage(prepData, widgetSize, hideHeader, _attempts = 0) {
+  const resolvedHide = await getEffectiveHideHeader(hideHeader);
+
+  if (_attempts >= prepData.pages.length) {
+    console.warn('Quran Widget: تعذّر تحميل صفحات التحضير، الانتقال للحفظ');
+    const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: resolvedHide });
+    const finalHide = await getEffectiveHideHeader(resolvedHide);
+    await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', finalHide);
+    return;
+  }
+
+  const pps = prepData.pagesPerSession > 0 ? prepData.pagesPerSession : 2;
+
+  // جمع صفحات الجلسة الحالية
+  const pageNums = [];
+  for (let i = prepData.currentIndex; i < Math.min(prepData.currentIndex + pps, prepData.pages.length); i++) {
+    pageNums.push(prepData.pages[i]);
+  }
+
+  if (pageNums.length === 0) {
+    const res = await StorageManager.incrementPrepSession();
+    if (!res.allDone) {
+      const newData = await StorageManager.getTodayPrepData();
+      await showPrepPage(newData, widgetSize, resolvedHide, _attempts + 1);
+    } else {
+      const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: resolvedHide });
+      await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', resolvedHide);
+    }
+    return;
+  }
+
+  const sessionPages = [];
+  for (const p of pageNums) {
+    const pageData = await getPageAyahsFromBG(p);
+    if (pageData) sessionPages.push({ pageNum: p, pageData });
+  }
+
+  if (!sessionPages || sessionPages.length === 0) {
+    await StorageManager.incrementPrepSession();
+    const newData = await StorageManager.getTodayPrepData();
+    if (newData.currentCycle <= newData.totalCycles) {
+      await showPrepPage(newData, widgetSize, resolvedHide, _attempts + 1);
+    }
+    return;
+  }
+
+  // الصفحة التالية للمعاينة
+  const lastSessionPageNum = sessionPages[sessionPages.length - 1].pageNum;
+  const nextPageNum = lastSessionPageNum >= 604 ? 1 : lastSessionPageNum + 1;
+  let nextPagePreview = null;
+  const nextPd = await getPageAyahsFromBG(nextPageNum);
+  if (nextPd) {
+    nextPagePreview = { pageNum: nextPageNum, surahTitle: nextPd.surahTitle, firstAyahHtml: nextPd.firstAyahHtml || '' };
+  }
+
+  await injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetSize, resolvedHide);
+}
+
+async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetSize = 'medium', hideHeader = false) {
+  const existingWidget = document.getElementById('quran-memorization-widget');
+  if (existingWidget) existingWidget.remove();
+
+  const fontData = await window.api.invoke('q:store:get', {
+    fontSizePx: 26,
+    testModeEnabled: false,
+    hideHeader: !!hideHeader,
+    audioReciter: 'Husary_64kbps',
+    audioRepeatCount: 1,
+    audioAutoPlay: false,
+  });
+  const testModeOn = fontData.testModeEnabled || false;
+  const isHeaderHidden = await getEffectiveHideHeader(hideHeader);
+  const reciterId = fontData.audioReciter || 'Husary_64kbps';
+  const reciterDisplayName = RECITER_NAMES[reciterId] || 'محمود خليل الحصري';
+  const repeatCount = fontData.audioRepeatCount || 1;
+  const autoPlay = !!fontData.audioAutoPlay;
+
+  const widget = document.createElement('div');
+  widget.id = 'quran-memorization-widget';
+  if (isHeaderHidden) {
+    widget.classList.add('is-header-collapsed');
+  }
+
+  const firstPage = sessionPages[0];
+  const lastPage = sessionPages[sessionPages.length - 1];
+  const surahTitle = firstPage.pageData.surahTitle;
+  const sessionCount = sessionPages.length;
+  const pageDisplay = sessionCount > 1
+    ? `${firstPage.pageNum}–${lastPage.pageNum}`
+    : `${firstPage.pageNum}`;
+
+  const currentSessionNum = Math.floor(prepData.currentIndex / prepData.pagesPerSession) + 1;
+  const totalSessions = Math.ceil(prepData.totalPages / prepData.pagesPerSession);
+  const progressPct = Math.min(Math.round(((prepData.currentIndex + sessionCount) / prepData.totalPages) * 100), 100);
+
+  const testBtnHtml = `<button class="quran-widget-test-btn${testModeOn ? ' active' : ''}" id="quran-test-toggle" title="وضع الاختبار">👁️</button>`;
+
+  const fullHeader = `
+    <div class="quran-widget-header quran-widget-prep-header" id="quran-prep-header-content" style="${isHeaderHidden ? 'display:none !important;' : 'display:flex !important;'}">
+      <div class="quran-widget-header-top">
+        <span class="quran-widget-surah-name">📑 تحضير — سورة ${surahTitle}</span>
+        <div class="quran-widget-header-controls">
+          <span class="quran-widget-page-number">صفحة ${pageDisplay}</span>
+          ${testBtnHtml}
+          <button class="quran-widget-header-btn" id="quran-header-collapse-btn" title="تصغير الهيدر">▲</button>
+        </div>
+      </div>
+      <div class="quran-widget-review-progress">
+        <div class="quran-widget-review-stats">
+          <span>🔁 جولة ${prepData.currentCycle} من ${prepData.totalCycles} • جلسة ${currentSessionNum} من ${totalSessions}</span>
+          <span>تحضير مسبق</span>
+        </div>
+        <div class="quran-widget-progress-container">
+          <div class="quran-widget-progress-bar-wrapper">
+            <div class="quran-widget-progress-bar quran-widget-prep-bar" style="width: ${progressPct}%"></div>
+          </div>
+          <div class="quran-widget-progress-text">${Math.min(prepData.currentIndex + sessionCount, prepData.totalPages)} / ${prepData.totalPages} صفحة</div>
+        </div>
+      </div>
+    </div>
+    <div class="quran-widget-header-collapsed prep" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex !important;' : 'display:none !important;'}">
+      <span>📑 تحضير — ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span> (جولة ${prepData.currentCycle}/${prepData.totalCycles})</span>
+      <button class="quran-widget-header-btn" id="quran-prep-header-expand-btn" title="توسيع الهيدر">▼</button>
+    </div>
+  `;
+
+  const allPrepAyahs = [];
+  const bodyHtml = sessionPages.map((sp, idx) => {
+    const sep = idx > 0
+      ? `<div class="quran-widget-page-divider">— صفحة ${toArabicNumerals(sp.pageNum)} —</div>`
+      : '';
+    const ayahs = sp.pageData.ayahDetails || [];
+    ayahs.forEach(a => allPrepAyahs.push(a));
+    const pageAyahsHtml = ayahs.length > 0
+      ? ayahs.map(a => `<span class="quran-ayah-unit" data-surah="${a.surah}" data-ayah="${a.ayah}" title="آية ${toArabicNumerals(a.ayah)} — انقر للاستماع">${a.text}</span>`).join(' ')
+      : sp.pageData.ayahTextHtml;
+    return sep + pageAyahsHtml;
+  }).join('');
+
+  const nextHtml = nextPagePreview ? `
+    <div class="quran-widget-next-ayah">
+      <div class="quran-widget-next-ayah-label">التالية: سورة ${nextPagePreview.surahTitle} — صفحة ${toArabicNumerals(nextPagePreview.pageNum)}</div>
+      <div class="quran-widget-next-ayah-text">${nextPagePreview.firstAyahHtml}</div>
+    </div>
+  ` : '';
+
+  const audioBarHtml = `
+    <div class="quran-widget-audio-bar" id="quran-audio-bar">
+      <div class="quran-audio-controls">
+        <button class="quran-audio-btn" id="quran-audio-play-btn" title="تشغيل / إيقاف التلاوة">
+          <span class="quran-audio-icon">▶</span>
+          <span class="quran-audio-btn-text">استماع</span>
+        </button>
+        <button class="quran-audio-btn quran-audio-btn-stop" id="quran-audio-stop-btn" title="إيقاف التلاوة" style="display:none;">⏹</button>
+        <button class="quran-audio-btn quran-audio-btn-repeat" id="quran-audio-repeat-btn" title="تكرار الآية">🔁 <span id="quran-audio-repeat-text">${repeatCount}x</span></button>
+      </div>
+      <div class="quran-audio-meta">
+        <span class="quran-audio-reciter" title="القارئ الحالي">🎙️ ${reciterDisplayName}</span>
+        <span class="quran-audio-source" id="quran-audio-source-badge"></span>
+      </div>
+    </div>
+  `;
+
+  widget.innerHTML = `
+    ${fullHeader}
+    <div class="quran-widget-body">${bodyHtml}${nextHtml}</div>
+    ${audioBarHtml}
+    <div class="quran-widget-footer">
+      <button class="quran-widget-btn quran-widget-btn-skip"      id="quran-btn-prep-skip">إعادة الجلسة 🔁</button>
+      <button class="quran-widget-btn quran-widget-btn-done-prep" id="quran-btn-prep-done">تم قراءة الجلسة ✅</button>
+    </div>
+    <div class="quran-widget-success" id="quran-success-msg"></div>
+  `;
+
+  const _prepBody = widget.querySelector('.quran-widget-body');
+  if (_prepBody) _prepBody.style.fontSize = fontData.fontSizePx + 'px';
+
+  if (testModeOn) widget.classList.add('quran-widget-test-active');
+
+  document.body.appendChild(widget);
+
+  if (_prepBody) wrapWordsForTestMode(_prepBody);
+
+  // ربط النقر على الآيات لتشغيلها بنقرة واحدة
+  widget.querySelectorAll('.quran-ayah-unit').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const s = parseInt(el.dataset.surah, 10);
+      const a = parseInt(el.dataset.ayah, 10);
+      if (s && a) QuranAudioPlayer.playSingleAyah(s, a);
+    });
+  });
+
+  setupAudioBar(widget, allPrepAyahs, repeatCount, reciterId, autoPlay);
+
+  // زر وضع الاختبار
+  document.getElementById('quran-test-toggle')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    widget.classList.toggle('quran-widget-test-active');
+    const isActive = widget.classList.contains('quran-widget-test-active');
+    e.currentTarget.classList.toggle('active', isActive);
+    await window.api.invoke('q:store:set', { testModeEnabled: isActive });
+  });
+
+  const toggleBtn = widget.querySelector('#quran-header-toggle');
+  const collapseBtn = widget.querySelector('#quran-header-collapse-btn');
+  const headerEl = widget.querySelector('#quran-prep-header-content');
+  const expandBtn = widget.querySelector('#quran-prep-header-expand-btn') || toggleBtn?.querySelector('.quran-widget-header-btn');
+  bindHeaderToggle(toggleBtn, collapseBtn, headerEl, expandBtn, widget);
+
+  document.getElementById('quran-btn-prep-skip')?.addEventListener('click', async () => {
+    try {
+      _dismissingWidget = true;
+      await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
+    } catch (e) {
+      console.warn('Quran Widget: prep-skip error', e);
+      _dismissingWidget = true;
+    }
+    widget.classList.add('hiding');
+    setTimeout(() => { cleanupWidget(widget); _dismissingWidget = false; }, 300);
+  });
+
+  document.getElementById('quran-btn-prep-done')?.addEventListener('click', async () => {
+    let res = null;
+    try {
+      const _rd = await window.api.invoke('q:store:get', { totalReadCount: 0 });
+      await window.api.invoke('q:store:set', { totalReadCount: _rd.totalReadCount + sessionCount });
+      res = await StorageManager.incrementPrepSession(sessionCount);
+    } catch (e) {
+      console.warn('Quran Widget: prep-done error', e);
+    }
+
+    const allDone = res && res.allDone;
+    const successMsg = document.getElementById('quran-success-msg');
+    let extraCycleClicked = false;
+    let dismissTimeout = null;
+
+    if (successMsg) {
+      if (allDone) {
+        successMsg.innerHTML = `
+          <div>🎉 أتممت ورد التحضير المسبق لليوم!</div>
+          <div style="font-size:16px;margin-top:6px;color:#0d9488;">أحسنت صنعاً، بارك الله فيك 🌟</div>
+          <button id="quran-btn-extra-cycle" class="quran-widget-btn" style="margin-top:12px;padding:6px 16px;background:#0d9488;border:none;color:#fff;border-radius:20px;font-size:13px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 3px 10px rgba(13,148,136,0.3);">
+            ➕ قراءة جولة إضافية
+          </button>
+        `;
+      } else {
+        const nextRoundMsg = res.newIndex === 0
+          ? `أتممت الجولة! بدء جولة ${res.newCycle} من ${res.totalCycles} 🔁`
+          : `أحسنت! استمر في القراءة 🌟`;
+        successMsg.innerHTML = `
+          <div>تمت قراءة الجلسة بنجاح ✅</div>
+          <div style="font-size:16px;margin-top:6px;color:#0d9488;">${nextRoundMsg}</div>
+        `;
+      }
+      successMsg.classList.add('show');
+
+      document.getElementById('quran-btn-extra-cycle')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        extraCycleClicked = true;
+        if (dismissTimeout) clearTimeout(dismissTimeout);
+        try {
+          await StorageManager.addExtraPrepCycle();
+          successMsg.innerHTML = `
+            <div>بدأت جولة إضافية بنجاح! ➕</div>
+            <div style="font-size:15px;margin-top:6px;color:#0d9488;">ستظهر الصفحة التالية قريباً 📖</div>
+          `;
+          setTimeout(() => {
+            _dismissingWidget = true;
+            widget.classList.add('hiding');
+            setTimeout(() => { cleanupWidget(widget); _dismissingWidget = false; }, 300);
+          }, 1200);
+        } catch (err) {
+          console.warn('Extra cycle error', err);
+        }
+      });
+    }
+
+    const waitTime = allDone ? 3000 : 1500;
+    dismissTimeout = setTimeout(async () => {
+      if (extraCycleClicked) return;
+      try {
+        _dismissingWidget = true;
+        await window.api.invoke('q:store:set', { lastCompletedTime: Date.now() });
+      } catch (e) {
+        console.warn('Quran Widget: prep-done finalize error', e);
+        _dismissingWidget = true;
+      }
+      widget.classList.add('hiding');
+      setTimeout(() => { cleanupWidget(widget); _dismissingWidget = false; }, 300);
+    }, waitTime);
+  });
+}
 
 async function initQuranWidget() {
   
@@ -701,6 +995,7 @@ async function initQuranWidget() {
         hideHeader: false,
         reviewEnabled: false,
         recentReviewEnabled: false,
+        prepModeEnabled: false,
         pausedUntil: 0
       });
     } catch (e) { return abortAndHide(); }
@@ -722,6 +1017,16 @@ async function initQuranWidget() {
       const recentData = await StorageManager.getTodayRecentReviewData();
       if (recentData.enabled && recentData.currentIndex < recentData.pages.length) {
         await showRecentReviewPage(recentData, widgetSize, hideHeader);
+        return;
+      }
+    }
+
+    // وضع القراءة التحضيرية — يعمل تلقائياً بعد إتمام ورد الحفظ اليومي
+    const dailyProgress = await StorageManager.getDailyProgress();
+    if (data.prepModeEnabled && dailyProgress.completed >= dailyProgress.goal) {
+      const prepData = await StorageManager.getTodayPrepData();
+      if (prepData.enabled && prepData.currentCycle <= prepData.totalCycles && prepData.pages.length > 0) {
+        await showPrepPage(prepData, widgetSize, hideHeader);
         return;
       }
     }

@@ -117,6 +117,10 @@ async function load() {
   if (gid('quranAudioBasePath')) gid('quranAudioBasePath').value = q.audioBasePath || '';
   if (gid('quranAudioRepeatCount')) gid('quranAudioRepeatCount').value = q.audioRepeatCount || 1;
   if (gid('quranAudioAutoPlay')) gid('quranAudioAutoPlay').checked = !!q.audioAutoPlay;
+  if (gid('quranPrepModeEnabled')) gid('quranPrepModeEnabled').checked = !!q.prepModeEnabled;
+  if (gid('quranPrepPagesCount')) gid('quranPrepPagesCount').value = q.prepPagesCount || 10;
+  if (gid('quranPrepPagesPerSession')) gid('quranPrepPagesPerSession').value = q.prepPagesPerSession || 2;
+  if (gid('quranPrepCyclesCount')) gid('quranPrepCyclesCount').value = q.prepCyclesCount || 1;
 
   // Load Quran Stats
   const qd = await window.api.invoke('q:store:get', null);
@@ -165,6 +169,29 @@ gid('quranHideHeader')?.addEventListener('change', async () => {
   }
 });
 
+gid('quranPrepModeEnabled')?.addEventListener('change', async () => {
+  try {
+    await window.api.invoke('q:store:set', {
+      prepModeEnabled: gid('quranPrepModeEnabled').checked
+    });
+  } catch (e) {
+    console.warn('Failed to auto-save prepModeEnabled', e);
+  }
+});
+
+gid('btnRestartPrepCycles')?.addEventListener('click', async () => {
+  try {
+    await window.api.invoke('q:store:set', {
+      prepSessionIndex: 0,
+      prepCurrentCycle: 1,
+      prepLastDate: ''
+    });
+    showStatus('تمت إعادة ضبط ورد التحضير لليوم بنجاح ✅', true);
+  } catch (e) {
+    showStatus('تعذر إعادة ضبط ورد التحضير', false);
+  }
+});
+
 // Save All
 gid('btnSave').addEventListener('click', async () => {
   let interval;
@@ -197,6 +224,10 @@ gid('btnSave').addEventListener('click', async () => {
     hideHeader: hideH,
     hide_header: hideH,
     progressiveModeEnabled: gid('quranProgressiveMode').checked,
+    prepModeEnabled: gid('quranPrepModeEnabled')?.checked || false,
+    prepPagesCount: parseInt(gid('quranPrepPagesCount')?.value, 10) || 10,
+    prepPagesPerSession: parseInt(gid('quranPrepPagesPerSession')?.value, 10) || 2,
+    prepCyclesCount: parseInt(gid('quranPrepCyclesCount')?.value, 10) || 1,
     audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
     audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
     audioRepeatCount: parseInt(gid('quranAudioRepeatCount')?.value, 10) || 1,

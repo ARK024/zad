@@ -67,6 +67,38 @@ pub fn is_quran_goal_met(quran_cfg: &Value) -> bool {
     completed_today >= daily_goal
 }
 
+/// Whether Quran preparation mode is enabled and pending for today.
+pub fn is_quran_prep_pending(quran_cfg: &Value) -> bool {
+    let prep_enabled = quran_cfg
+        .get("prepModeEnabled")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !prep_enabled {
+        return false;
+    }
+    let day_start_hour = quran_cfg
+        .get("dayStartHour")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+    let today = today_string_with_offset(day_start_hour);
+    let prep_last_date = quran_cfg
+        .get("prepLastDate")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if prep_last_date != today {
+        return true;
+    }
+    let cycles_count = quran_cfg
+        .get("prepCyclesCount")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(1);
+    let current_cycle = quran_cfg
+        .get("prepCurrentCycle")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(1);
+    current_cycle <= cycles_count
+}
+
 /// Active interval in milliseconds based on the current mode.
 pub fn get_active_interval_ms(cfg: &Value, quran_cfg: &Value) -> i64 {
     let mode = AppMode::parse(
@@ -84,7 +116,9 @@ pub fn get_active_interval_ms(cfg: &Value, quran_cfg: &Value) -> i64 {
     match mode {
         AppMode::QuranOnly => minutes_to_ms(quran_iv_min),
         AppMode::HadithOnly => minutes_to_ms(hadith_iv_min),
-        AppMode::Sequential if !is_quran_goal_met(quran_cfg) => minutes_to_ms(quran_iv_min),
+        AppMode::Sequential if !is_quran_goal_met(quran_cfg) || is_quran_prep_pending(quran_cfg) => {
+            minutes_to_ms(quran_iv_min)
+        }
         _ => minutes_to_ms(hadith_iv_min),
     }
 }
@@ -149,7 +183,11 @@ impl Orchestrator {
             }
             AppMode::Sequential => {
                 if is_quran_goal_met(quran_cfg) {
-                    TickAction::HideQuranShowHadith
+                    if is_quran_prep_pending(quran_cfg) {
+                        TickAction::ShowQuran
+                    } else {
+                        TickAction::HideQuranShowHadith
+                    }
                 } else {
                     TickAction::ShowQuran
                 }
@@ -309,5 +347,39 @@ mod tests {
             o.decide_tick_action(&cfg, &q),
             TickAction::HideQuranShowHadith
         );
+    }
+
+    #[test]
+    fn prep_mode_pending_keeps_showing_quran_in_sequential() {
+        let o = Orchestrator::new();
+        let cfg = json!({"appMode": "sequential", "interval": 30});
+        // Goal is met, but prepModeEnabled is true and prep is pending
+        let q = json!({
+            "dailyGoal": 1,
+            "memorizationInterval": 12,
+            "recentReadings": [{"date": today_string_with_offset(0)}],
+            "prepModeEnabled": true,
+            "prepPagesCount": 10,
+            "prepPagesPerSession": 2,
+            "prepCyclesCount": 2,
+            "prepCurrentCycle": 1,
+            "prepLastDate": today_string_with_offset(0)
+        });
+        assert!(is_quran_prep_pending(&q));
+        assert_eq!(get_active_interval_ms(&cfg, &q), 12 * 60 * 1000);
+        assert_eq!(o.decide_tick_action(&cfg, &q), TickAction::ShowQuran);
+
+        // Once all cycles completed (prepCurrentCycle > prepCyclesCount):
+        let q_done = json!({
+            "dailyGoal": 1,
+            "recentReadings": [{"date": today_string_with_offset(0)}],
+            "prepModeEnabled": true,
+            "prepCyclesCount": 2,
+            "prepCurrentCycle": 3,
+            "prepLastDate": today_string_with_offset(0)
+        });
+        assert!(!is_quran_prep_pending(&q_done));
+        assert_eq!(get_active_interval_ms(&cfg, &q_done), 30 * 60 * 1000);
+        assert_eq!(o.decide_tick_action(&cfg, &q_done), TickAction::HideQuranShowHadith);
     }
 }
