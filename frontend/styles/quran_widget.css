@@ -783,22 +783,19 @@
   vertical-align: baseline;
 }
 
-.test-word.masked-word:hover:not(.revealed) {
-  text-shadow: 0 0 9px currentColor !important;
-  background-color: rgba(26, 152, 80, 0.22) !important;
-  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.45) !important;
-}
-
+/* تظهر الكلمة بالكامل بوضوح تام عند تمرير الماوس عليها أو كشفها */
+.test-word.masked-word:hover,
 .test-word.masked-word.revealed {
   color: inherit !important;
   text-shadow: none !important;
   filter: none !important;
+  opacity: 1 !important;
   background-color: rgba(26, 152, 80, 0.16) !important;
-  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.5) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.45) !important;
 }
 
-/* Level 4: غيباً (إخفاء كامل بدون تلميح نصي للتسميع) */
-.test-level-4 .test-word.masked-word:not(.revealed) {
+/* Level 4: غيباً (إخفاء كامل بدون تلميح نصي للتسميع ويظهر فوراً عند تمرير الماوس) */
+.test-level-4 .test-word.masked-word:not(.revealed):not(:hover) {
   color: transparent !important;
   text-shadow: none !important;
   filter: none !important;
@@ -806,12 +803,17 @@
   box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.35) !important;
 }
 
-.test-level-4 .test-word.masked-word:not(.revealed):hover {
-  text-shadow: 0 0 12px currentColor !important;
-  background-color: rgba(26, 152, 80, 0.26) !important;
+.test-level-4 .test-word.masked-word:hover,
+.test-level-4 .test-word.masked-word.revealed {
+  color: inherit !important;
+  text-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  background-color: rgba(26, 152, 80, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.45) !important;
 }
 
-/* Level 3: مفاتيح (الحرف الأول واضح والباقي مخفي) */
+/* Level 3: مفاتيح (الحرف الأول واضح والباقي مخفي، وتظهر الكلمة متصلة طبيعياً دون انقطاع عند التمرير) */
 .test-word.keys-mode {
   display: inline-block !important;
   cursor: pointer !important;
@@ -824,14 +826,22 @@
   transition: all .2s ease;
 }
 
+.test-word.keys-mode .keys-masked-view {
+  display: inline !important;
+}
+
+.test-word.keys-mode .keys-full-view {
+  display: none !important;
+}
+
 .test-word.keys-mode .head-text {
-  display: inline-block !important;
+  display: inline !important;
   font-weight: 800 !important;
   color: var(--accent, #1a9850) !important;
 }
 
 .test-word.keys-mode .tail-text {
-  display: inline-block !important;
+  display: inline !important;
   color: transparent !important;
   text-shadow: 0 0 11px currentColor !important;
   filter: blur(4px) !important;
@@ -839,25 +849,26 @@
   border-radius: 3px;
 }
 
-.test-word.keys-mode:hover:not(.revealed) .tail-text {
-  text-shadow: 0 0 7px currentColor !important;
-}
-
+/* عند تمرير الماوس أو النقر: تظهر الكلمة كاملة بنصها المتصل الأصلي */
+.test-word.keys-mode:hover,
 .test-word.keys-mode.revealed {
   background-color: rgba(26, 152, 80, 0.16) !important;
-  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.5) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 152, 80, 0.45) !important;
 }
 
-.test-word.keys-mode.revealed .head-text {
-  color: inherit !important;
-  font-weight: inherit !important;
+.test-word.keys-mode:hover .keys-masked-view,
+.test-word.keys-mode.revealed .keys-masked-view {
+  display: none !important;
 }
 
-.test-word.keys-mode.revealed .tail-text {
+.test-word.keys-mode:hover .keys-full-view,
+.test-word.keys-mode.revealed .keys-full-view {
+  display: inline !important;
   color: inherit !important;
   text-shadow: none !important;
   filter: none !important;
-  background-color: transparent !important;
+  opacity: 1 !important;
+  font-weight: inherit !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -865,13 +876,16 @@
     background-color: rgba(77, 182, 172, 0.16) !important;
     box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.32) !important;
   }
-  .test-word.masked-word:hover:not(.revealed) {
-    background-color: rgba(77, 182, 172, 0.26) !important;
-  }
+  .test-word.masked-word:hover,
   .test-word.masked-word.revealed {
-    background-color: rgba(77, 182, 172, 0.2) !important;
+    color: inherit !important;
+    text-shadow: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    background-color: rgba(77, 182, 172, 0.22) !important;
+    box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.5) !important;
   }
-  .test-level-4 .test-word.masked-word:not(.revealed) {
+  .test-level-4 .test-word.masked-word:not(.revealed):not(:hover) {
     background-color: rgba(77, 182, 172, 0.18) !important;
     box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.4) !important;
   }
@@ -879,8 +893,10 @@
     background-color: rgba(77, 182, 172, 0.1) !important;
     box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.25) !important;
   }
+  .test-word.keys-mode:hover,
   .test-word.keys-mode.revealed {
     background-color: rgba(77, 182, 172, 0.22) !important;
+    box-shadow: inset 0 0 0 1px rgba(77, 182, 172, 0.5) !important;
   }
 }
 

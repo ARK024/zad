@@ -1049,16 +1049,20 @@ function isAyahNumberOrSymbol(word) {
   return /^[\s\uFC00-\uFD3D\uFD3E\uFD3F\u06D6-\u06ED0-9\u0660-\u0669\(\)﴿﴾]+$/u.test(word);
 }
 
+const NON_CONNECTING_ARABIC = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'د', 'ذ', 'ر', 'ز', 'و', 'ؤ', 'ة', 'ء', 'ى']);
+
 function splitArabicWordHeadTail(word) {
-  if (isAyahNumberOrSymbol(word)) return { head: word, tail: '' };
+  if (isAyahNumberOrSymbol(word)) return { head: word, tail: '', connects: false, raw: word };
   const diacriticsRegex = /[\u064B-\u065F\u0670\u06D6-\u06ED]/;
   let head = '';
+  let baseChar = '';
   let i = 0;
   while (i < word.length && !word[i].match(/\p{L}/u)) {
     head += word[i];
     i++;
   }
   if (i < word.length) {
+    baseChar = word[i];
     head += word[i];
     i++;
   }
@@ -1066,7 +1070,13 @@ function splitArabicWordHeadTail(word) {
     head += word[i];
     i++;
   }
-  return { head: head || word, tail: word.slice(i) };
+  const rawTail = word.slice(i);
+  if (!rawTail) return { head: head || word, tail: '', connects: false, raw: word };
+
+  const connects = !NON_CONNECTING_ARABIC.has(baseChar);
+  const headWithZwj = connects ? (head + '\u200D') : head;
+  const tailWithZwj = connects ? ('\u200D' + rawTail) : rawTail;
+  return { head: headWithZwj, tail: tailWithZwj, connects, raw: word };
 }
 
 function createChunks(ayahs, fullText, ayahDetails = []) {
@@ -1195,18 +1205,28 @@ function renderAyahTextWithMasks(containerEl, text, level, activeAyahList = null
 
           if (isKeysMode) {
             span.classList.add('keys-mode');
-            const { head, tail } = splitArabicWordHeadTail(w);
+            const { head, tail, raw } = splitArabicWordHeadTail(w);
+
+            const maskedView = document.createElement('span');
+            maskedView.className = 'keys-masked-view';
+
             const headSpan = document.createElement('span');
             headSpan.className = 'head-text';
             headSpan.textContent = head;
-            span.appendChild(headSpan);
+            maskedView.appendChild(headSpan);
 
             if (tail) {
               const tailSpan = document.createElement('span');
               tailSpan.className = 'tail-text';
               tailSpan.textContent = tail;
-              span.appendChild(tailSpan);
+              maskedView.appendChild(tailSpan);
             }
+            span.appendChild(maskedView);
+
+            const fullView = document.createElement('span');
+            fullView.className = 'keys-full-view';
+            fullView.textContent = raw || w;
+            span.appendChild(fullView);
           } else {
             span.textContent = w;
             if (shouldMask) {
@@ -1214,8 +1234,7 @@ function renderAyahTextWithMasks(containerEl, text, level, activeAyahList = null
             }
           }
 
-          span.addEventListener('click', (e) => {
-            e.stopPropagation();
+          span.addEventListener('click', () => {
             span.classList.toggle('revealed');
           });
           wordIdx++;
@@ -1224,8 +1243,7 @@ function renderAyahTextWithMasks(containerEl, text, level, activeAyahList = null
         ayahSpan.appendChild(span);
       }
 
-      ayahSpan.addEventListener('click', (e) => {
-        if (e.target.closest('.masked-word:not(.revealed), .keys-mode:not(.revealed)')) return;
+      ayahSpan.addEventListener('click', () => {
         QuranAudioPlayer.playSingleAyah(item.surah, item.ayah);
       });
 
@@ -1268,18 +1286,28 @@ function renderAyahTextWithMasks(containerEl, text, level, activeAyahList = null
 
       if (isKeysMode) {
         span.classList.add('keys-mode');
-        const { head, tail } = splitArabicWordHeadTail(w);
+        const { head, tail, raw } = splitArabicWordHeadTail(w);
+
+        const maskedView = document.createElement('span');
+        maskedView.className = 'keys-masked-view';
+
         const headSpan = document.createElement('span');
         headSpan.className = 'head-text';
         headSpan.textContent = head;
-        span.appendChild(headSpan);
+        maskedView.appendChild(headSpan);
 
         if (tail) {
           const tailSpan = document.createElement('span');
           tailSpan.className = 'tail-text';
           tailSpan.textContent = tail;
-          span.appendChild(tailSpan);
+          maskedView.appendChild(tailSpan);
         }
+        span.appendChild(maskedView);
+
+        const fullView = document.createElement('span');
+        fullView.className = 'keys-full-view';
+        fullView.textContent = raw || w;
+        span.appendChild(fullView);
       } else {
         span.textContent = w;
         if (shouldMask) {
@@ -1287,8 +1315,7 @@ function renderAyahTextWithMasks(containerEl, text, level, activeAyahList = null
         }
       }
 
-      span.addEventListener('click', (e) => {
-        e.stopPropagation();
+      span.addEventListener('click', () => {
         span.classList.toggle('revealed');
       });
       wordIdx++;
