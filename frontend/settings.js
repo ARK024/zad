@@ -94,6 +94,10 @@ async function load() {
     audioBasePath: '',
     audioRepeatCount: 1,
     audioAutoPlay: false,
+    prepModeEnabled: false,
+    prepPagesCount: 10,
+    prepPagesPerSession: 2,
+    prepCyclesCount: 1,
   });
   gid('quranDailyGoal').value = q.dailyGoal;
   gid('quranInterval').value = q.memorizationInterval;
@@ -270,6 +274,10 @@ gid('btnShowQuranNow')?.addEventListener('click', async () => {
       hideHeader: hideH,
       hide_header: hideH,
       progressiveModeEnabled: gid('quranProgressiveMode').checked,
+      prepModeEnabled: gid('quranPrepModeEnabled')?.checked || false,
+      prepPagesCount: parseInt(gid('quranPrepPagesCount')?.value, 10) || 10,
+      prepPagesPerSession: parseInt(gid('quranPrepPagesPerSession')?.value, 10) || 2,
+      prepCyclesCount: parseInt(gid('quranPrepCyclesCount')?.value, 10) || 1,
       audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
       audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
       audioRepeatCount: parseInt(gid('quranAudioRepeatCount')?.value, 10) || 1,
@@ -288,6 +296,35 @@ gid('btnShowQuranNow')?.addEventListener('click', async () => {
   }
 });
 
+gid('btnShowPrepNow')?.addEventListener('click', async () => {
+  try {
+    if (gid('quranPrepModeEnabled')) gid('quranPrepModeEnabled').checked = true;
+    const hideH = !!gid('quranHideHeader').checked;
+    localStorage.setItem('quran_hide_header', hideH ? 'true' : 'false');
+    localStorage.setItem('forcePrepMode', 'true');
+    const qData = {
+      prepModeEnabled: true,
+      prepPagesCount: parseInt(gid('quranPrepPagesCount')?.value, 10) || 10,
+      prepPagesPerSession: parseInt(gid('quranPrepPagesPerSession')?.value, 10) || 2,
+      prepCyclesCount: parseInt(gid('quranPrepCyclesCount')?.value, 10) || 1,
+      widgetSize: gid('quranWidgetSize').value,
+      fontSizePx: parseInt(gid('quranFontSize').value, 10) || 26,
+      hideHeader: hideH,
+      hide_header: hideH,
+    };
+    await window.api.invoke('q:store:set', qData);
+    if (window.S && window.S.showQuranNow) {
+      await window.S.showQuranNow();
+    } else {
+      await window.api.invoke('q_show_now');
+    }
+    showStatus('📑 تم عرض نافذة القراءة التحضيرية');
+  } catch (e) {
+    console.error('Failed to show prep window:', e);
+    showStatus('تعذر عرض نافذة التحضير', false);
+  }
+});
+
 // Hadith actions
 gid('btnShowNow')?.addEventListener('click', async () => {
   const isQuranTabActive = document.getElementById('tab-quran')?.classList.contains('active');
@@ -303,6 +340,10 @@ gid('btnShowNow')?.addEventListener('click', async () => {
         hideHeader: hideH,
         hide_header: hideH,
         progressiveModeEnabled: gid('quranProgressiveMode').checked,
+        prepModeEnabled: gid('quranPrepModeEnabled')?.checked || false,
+        prepPagesCount: parseInt(gid('quranPrepPagesCount')?.value, 10) || 10,
+        prepPagesPerSession: parseInt(gid('quranPrepPagesPerSession')?.value, 10) || 2,
+        prepCyclesCount: parseInt(gid('quranPrepCyclesCount')?.value, 10) || 1,
         audioReciter: gid('quranAudioReciter')?.value || 'Husary_64kbps',
         audioBasePath: (gid('quranAudioBasePath')?.value || '').trim(),
         audioRepeatCount: parseInt(gid('quranAudioRepeatCount')?.value, 10) || 1,

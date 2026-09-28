@@ -336,6 +336,12 @@ pub fn q_store_set(
                 if k == "currentQuranPage"
                     || k == "reviewIndex"
                     || k == "recentReviewIndex"
+                    || k == "prepModeEnabled"
+                    || k == "prepSessionIndex"
+                    || k == "prepCurrentCycle"
+                    || k == "prepCyclesCount"
+                    || k == "prepPagesCount"
+                    || k == "prepPagesPerSession"
                 {
                     had_progress = true;
                 }

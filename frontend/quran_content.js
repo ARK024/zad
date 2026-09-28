@@ -777,6 +777,7 @@ async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetS
       <div class="quran-widget-header-top">
         <span class="quran-widget-surah-name">📑 تحضير — سورة ${surahTitle}</span>
         <div class="quran-widget-header-controls">
+          <button class="quran-widget-mode-btn" id="quran-switch-to-memo" title="العودة لوضع الحفظ">📖 حفظ</button>
           <span class="quran-widget-page-number">صفحة ${pageDisplay}</span>
           ${testBtnHtml}
           <button class="quran-widget-header-btn" id="quran-header-collapse-btn" title="تصغير الهيدر">▲</button>
@@ -796,7 +797,10 @@ async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetS
       </div>
     </div>
     <div class="quran-widget-header-collapsed prep" id="quran-header-toggle" title="توسيع الهيدر" style="${isHeaderHidden ? 'display:flex !important;' : 'display:none !important;'}">
-      <span>📑 تحضير — ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span> (جولة ${prepData.currentCycle}/${prepData.totalCycles})</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span>📑 تحضير — ${surahTitle} — صفحة <span class="collapsed-page-num">${pageDisplay}</span> (جولة ${prepData.currentCycle}/${prepData.totalCycles})</span>
+        <button class="quran-widget-mode-btn" id="quran-switch-to-memo-collapsed" title="العودة لوضع الحفظ">📖 حفظ</button>
+      </div>
       <button class="quran-widget-header-btn" id="quran-prep-header-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
   `;
@@ -877,6 +881,16 @@ async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetS
     const isActive = widget.classList.contains('quran-widget-test-active');
     e.currentTarget.classList.toggle('active', isActive);
     await window.api.invoke('q:store:set', { testModeEnabled: isActive });
+  });
+
+  // زر التبديل لوضع الحفظ
+  widget.querySelectorAll('#quran-switch-to-memo, #quran-switch-to-memo-collapsed').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      cleanupWidget(widget);
+      const data = await window.api.invoke('q:store:get', { currentQuranPage: 1, widgetSize: 'medium', hideHeader: false });
+      await showNewMemorizationPage(data.currentQuranPage, data.widgetSize || 'medium', hideHeader);
+    });
   });
 
   const toggleBtn = widget.querySelector('#quran-header-toggle');
@@ -1021,11 +1035,16 @@ async function initQuranWidget() {
       }
     }
 
-    // وضع القراءة التحضيرية — يعمل تلقائياً بعد إتمام ورد الحفظ اليومي
+    // وضع القراءة التحضيرية — يعمل تلقائياً بعد إتمام ورد الحفظ اليومي، أو فورياً عند طلب عرضه
+    const forcePrep = localStorage.getItem('forcePrepMode') === 'true';
+    if (forcePrep) localStorage.removeItem('forcePrepMode');
+
     const dailyProgress = await StorageManager.getDailyProgress();
-    if (data.prepModeEnabled && dailyProgress.completed >= dailyProgress.goal) {
+    const shouldShowPrep = forcePrep || (data.prepModeEnabled && dailyProgress.completed >= dailyProgress.goal);
+
+    if (shouldShowPrep) {
       const prepData = await StorageManager.getTodayPrepData();
-      if (prepData.enabled && prepData.currentCycle <= prepData.totalCycles && prepData.pages.length > 0) {
+      if (prepData.enabled && (forcePrep || prepData.currentCycle <= prepData.totalCycles) && prepData.pages.length > 0) {
         await showPrepPage(prepData, widgetSize, hideHeader);
         return;
       }
@@ -1645,10 +1664,12 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     audioReciter: 'Husary_64kbps',
     audioRepeatCount: 1,
     audioAutoPlay: false,
+    prepModeEnabled: false,
   });
 
   const isHeaderHidden = await getEffectiveHideHeader(hideHeader);
   let progressiveModeOn = !!config.progressiveModeEnabled;
+  const prepModeOn = !!config.prepModeEnabled;
   let currentLevel = Math.max(0, Math.min(4, config.progressiveLevel || 0));
   let currentChunkIdx = config.progressiveChunk || 0;
 
@@ -1680,6 +1701,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
           <button class="quran-widget-mode-btn${progressiveModeOn ? ' active' : ''}" id="quran-mode-toggle" title="التبديل بين وضع الحفظ العادي ووضع التدرج الذكي">
             ${progressiveModeOn ? '🧩 متدرج' : '📖 عادي'}
           </button>
+          ${prepModeOn ? `<button class="quran-widget-mode-btn" id="quran-switch-to-prep" title="الانتقال إلى وضع القراءة التحضيرية">📑 تحضير</button>` : ''}
           <span class="quran-widget-page-number">صفحة ${pageNumber}</span>
           <span class="quran-widget-read-badge">${readCountText}</span>
           <button class="quran-widget-header-btn" id="quran-header-collapse-btn" title="تصغير الهيدر">▲</button>
@@ -1701,6 +1723,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
         <button class="quran-widget-mode-btn${progressiveModeOn ? ' active' : ''}" id="quran-mode-toggle-collapsed" title="التبديل بين وضع الحفظ العادي ووضع التدرج الذكي">
           ${progressiveModeOn ? '🧩 متدرج' : '📖 عادي'}
         </button>
+        ${prepModeOn ? `<button class="quran-widget-mode-btn" id="quran-switch-to-prep-collapsed" title="الانتقال إلى وضع القراءة التحضيرية">📑 تحضير</button>` : ''}
       </div>
       <button class="quran-widget-header-btn" id="quran-header-expand-btn" title="توسيع الهيدر">▼</button>
     </div>
@@ -1845,12 +1868,22 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   bindHeaderToggle(toggleBtn, collapseBtn, headerEl, expandBtn, widget);
 
   // تبديل الوضع بين عادي ومتدرج
-  widget.querySelectorAll('.quran-widget-mode-btn').forEach(btn => {
+  widget.querySelectorAll('#quran-mode-toggle, #quran-mode-toggle-collapsed').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const nextState = !progressiveModeOn;
       setProgressiveMode(nextState);
       await window.api.invoke('q:store:set', { progressiveModeEnabled: nextState });
+    });
+  });
+
+  // التبديل إلى وضع القراءة التحضيرية
+  widget.querySelectorAll('#quran-switch-to-prep, #quran-switch-to-prep-collapsed').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      cleanupWidget(widget);
+      const prepData = await StorageManager.getTodayPrepData();
+      await showPrepPage(prepData, widgetSize, hideHeader);
     });
   });
 
@@ -1861,7 +1894,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       currentLevel = parseInt(btn.dataset.lvl, 10) || 0;
       if (!progressiveModeOn && currentLevel > 0) {
         progressiveModeOn = true;
-        widget.querySelectorAll('.quran-widget-mode-btn').forEach(b => {
+        widget.querySelectorAll('#quran-mode-toggle, #quran-mode-toggle-collapsed').forEach(b => {
           b.classList.add('active');
           b.textContent = '🧩 متدرج';
         });
@@ -1877,7 +1910,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     e.stopPropagation();
     if (!progressiveModeOn) {
       progressiveModeOn = true;
-      widget.querySelectorAll('.quran-widget-mode-btn').forEach(b => {
+      widget.querySelectorAll('#quran-mode-toggle, #quran-mode-toggle-collapsed').forEach(b => {
         b.classList.add('active');
         b.textContent = '🧩 متدرج';
       });
@@ -1909,7 +1942,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
       currentChunkIdx = parseInt(btn.dataset.chunk, 10) || 0;
       if (!progressiveModeOn && currentChunkIdx > 0) {
         progressiveModeOn = true;
-        widget.querySelectorAll('.quran-widget-mode-btn').forEach(b => {
+        widget.querySelectorAll('#quran-mode-toggle, #quran-mode-toggle-collapsed').forEach(b => {
           b.classList.add('active');
           b.textContent = '🧩 متدرج';
         });
