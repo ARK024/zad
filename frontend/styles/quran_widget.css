@@ -1123,3 +1123,254 @@
   background: rgba(52, 152, 219, 0.15);
   color: #2980b9;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MUSHAF PAGE 15-LINES AUTHENTIC LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Mushaf Page Container */
+.mushaf-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  background: #fbf9f2;
+  color: #111111;
+  padding: 8px 10px 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  direction: rtl;
+  user-select: text;
+  margin: 2px 0 10px;
+  transition: all 0.3s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-page-wrapper {
+    background: #17221c;
+    color: #ede9dc;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Page Top Header (Surah name right, Juz left) */
+.mushaf-page-top-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 12px 5px;
+  font-family: 'Amiri', 'Traditional Arabic', serif;
+  font-size: 13.5px;
+  font-weight: bold;
+  color: #7a632b;
+  border-bottom: 1.5px solid rgba(184, 151, 88, 0.35);
+  margin-bottom: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-page-top-meta {
+    color: #c9b47e;
+    border-bottom-color: rgba(184, 151, 88, 0.25);
+  }
+}
+
+/* The Grand Islamic Decorative Frame (Outer & Inner) */
+.mushaf-frame-outer {
+  border: 2px solid #b89758;
+  border-radius: 8px;
+  padding: 3px;
+  background: rgba(184, 151, 88, 0.04);
+  position: relative;
+}
+
+.mushaf-frame-inner {
+  border: 1px solid rgba(184, 151, 88, 0.5);
+  border-radius: 6px;
+  padding: 8px 12px 10px;
+  background: #fffdf8;
+  position: relative;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-frame-outer {
+    border-color: #8c7340;
+    background: rgba(140, 115, 64, 0.05);
+  }
+  .mushaf-frame-inner {
+    border-color: rgba(140, 115, 64, 0.35);
+    background: #1a2720;
+  }
+}
+
+/* 15 Lines Container */
+.mushaf-lines-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+/* Individual Mushaf Line */
+.mushaf-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  min-height: 28px;
+  line-height: 1.62;
+  font-family: 'QuranFont', 'Amiri', serif;
+  font-size: 20px;
+  box-sizing: border-box;
+}
+
+.mushaf-line.line-center {
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Individual Quranic Word */
+.mushaf-word {
+  display: inline-block;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 0 1px;
+  border-radius: 3px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.mushaf-word:hover {
+  color: #1a9850;
+  background-color: rgba(26, 152, 80, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-word:hover {
+    color: #4ade80;
+    background-color: rgba(74, 222, 128, 0.12);
+  }
+}
+
+/* Dimmed Chunk for Progressive Mode */
+.mushaf-word.dimmed-chunk,
+.mushaf-ayah-badge.dimmed-chunk {
+  opacity: 0.32;
+  filter: grayscale(60%);
+  transition: opacity 0.3s;
+}
+
+/* Active Reciting Highlight */
+.mushaf-word.active-reciting,
+.mushaf-ayah-badge.active-reciting {
+  background-color: rgba(26, 152, 80, 0.25) !important;
+  color: #157340 !important;
+  border-radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-word.active-reciting,
+  .mushaf-ayah-badge.active-reciting {
+    background-color: rgba(74, 222, 128, 0.25) !important;
+    color: #86efac !important;
+  }
+}
+
+/* Ayah End Medallion */
+.mushaf-ayah-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'QuranFont', 'Amiri', serif;
+  font-size: 0.88em;
+  color: #967425;
+  margin: 0 2px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.mushaf-ayah-badge:hover {
+  transform: scale(1.18);
+  color: #1a9850;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-ayah-badge {
+    color: #c9a64a;
+  }
+  .mushaf-ayah-badge:hover {
+    color: #4ade80;
+  }
+}
+
+/* Ornate Surah Header Plate */
+.mushaf-surah-header-plate {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 5px 0;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #f7f1de, #ede0bd, #f7f1de);
+  border: 1.5px solid #b89758;
+  border-radius: 8px;
+  box-shadow: inset 0 0 6px rgba(184, 151, 88, 0.25);
+  font-family: 'Amiri', serif;
+  color: #634b15;
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-surah-header-plate {
+    background: linear-gradient(135deg, #24352a, #2e4335, #24352a);
+    border-color: #8c7340;
+    box-shadow: inset 0 0 6px rgba(140, 115, 64, 0.35);
+    color: #dec88d;
+  }
+}
+
+.mushaf-plate-title {
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.mushaf-plate-side {
+  font-size: 12.5px;
+  opacity: 0.9;
+}
+
+/* Basmalah Line */
+.mushaf-basmala-line {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 3px 0 5px;
+  font-family: 'QuranFont', 'Amiri', serif;
+  font-size: 20px;
+  color: #1a1a1a;
+  letter-spacing: 0.5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-basmala-line {
+    color: #ece7da;
+  }
+}
+
+/* Page Bottom Footer */
+.mushaf-page-bottom-meta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px 0 1px;
+  font-family: 'Amiri', serif;
+  font-size: 13.5px;
+  font-weight: bold;
+  color: #7a632b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mushaf-page-bottom-meta {
+    color: #c9b47e;
+  }
+}

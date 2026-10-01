@@ -32,6 +32,10 @@ pub struct PageAyahs {
     pub ayahs: Vec<String>,
     #[serde(rename = "ayahDetails", default)]
     pub ayah_details: Vec<AyahDetail>,
+    #[serde(rename = "lines", skip_serializing_if = "Option::is_none")]
+    pub lines: Option<Vec<Value>>,
+    #[serde(rename = "juz", skip_serializing_if = "Option::is_none")]
+    pub juz: Option<i64>,
 }
 
 #[derive(Default)]
@@ -41,6 +45,7 @@ struct DataInner {
     search_index: Vec<SearchEntry>,
     quran: Vec<Value>,
     page_index: HashMap<i64, Vec<usize>>, // page_number -> indices into quran vec
+    mushaf_layout: HashMap<i64, Value>,
 }
 
 struct SearchEntry {
@@ -188,6 +193,37 @@ impl DataLoader {
         } else {
             log::error!("Failed to parse quran JSON: {}", raw.len());
         }
+
+        let layout_path = data_dir.join("mushaf_layout.json");
+        let layout_raw: std::borrow::Cow<'_, str> = if layout_path.exists() {
+            match std::fs::read_to_string(&layout_path) {
+                Ok(s) => {
+                    log::info!("Loaded mushaf_layout from disk: {:?}", layout_path);
+                    std::borrow::Cow::Owned(s)
+                }
+                Err(e) => {
+                    log::warn!("Failed to read {:?}: {}, trying fallback", layout_path, e);
+                    std::borrow::Cow::Borrowed(include_str!("../../data/mushaf_layout.json"))
+                }
+            }
+        } else {
+            log::debug!("External mushaf_layout file not found at {:?}, using embedded data", layout_path);
+            std::borrow::Cow::Borrowed(include_str!("../../data/mushaf_layout.json"))
+        };
+
+        if let Ok(map) = serde_json::from_str::<HashMap<String, Value>>(&layout_raw) {
+            let mut parsed_layout: HashMap<i64, Value> = HashMap::new();
+            for (k, v) in map {
+                if let Ok(pno) = k.parse::<i64>() {
+                    parsed_layout.insert(pno, v);
+                }
+            }
+            log::info!("Loaded mushaf layout for {} pages", parsed_layout.len());
+            let mut inner = self.inner.write();
+            inner.mushaf_layout = parsed_layout;
+        } else {
+            log::warn!("Could not parse mushaf_layout.json");
+        }
     }
 
     pub fn build_search_index(&self) {
@@ -299,12 +335,23 @@ impl DataLoader {
         let ayah_text_html = ayahs.join(" ");
         let first_ayah_html = ayahs.first().cloned().unwrap_or_default();
 
+        let layout_page = inner.mushaf_layout.get(&page_number);
+        let lines = layout_page
+            .and_then(|p| p.get("lines"))
+            .and_then(|v| v.as_array())
+            .cloned();
+        let juz = layout_page
+            .and_then(|p| p.get("juz"))
+            .and_then(|v| v.as_i64());
+
         Some(PageAyahs {
             surah_title,
             ayah_text_html,
             first_ayah_html,
             ayahs,
             ayah_details,
+            lines,
+            juz,
         })
     }
 
@@ -431,5 +478,27 @@ mod tests {
         assert_eq!(p.ayah_text_html, "ayah1 ayah2");
         assert_eq!(p.first_ayah_html, "ayah1");
         assert!(dl.get_page_ayahs(99).is_none());
+    }
+
+    #[test]
+    fn test_mushaf_layout_loads_lines() {
+        let dir = write_temp_data(
+            r#"[
+                {"page": 3, "sura_name_ar": "البقرة", "aya_text": "text"}
+            ]"#,
+            "quran.json",
+        );
+        let layout_file = dir.join("mushaf_layout.json");
+        std::fs::write(
+            &layout_file,
+            r#"{"3": {"page": 3, "juz": 1, "surah_title": "البقرة", "lines": [{"line": 1, "type": "text", "words": []}]}}"#,
+        ).unwrap();
+
+        let dl = DataLoader::new();
+        dl.load_quran_data(&dir);
+        let p = dl.get_page_ayahs(3).unwrap();
+        assert_eq!(p.juz, Some(1));
+        assert!(p.lines.is_some());
+        assert_eq!(p.lines.unwrap().len(), 1);
     }
 }

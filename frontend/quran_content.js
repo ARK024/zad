@@ -33,6 +33,7 @@ function cleanupWidget(widget) {
 // لف كل كلمة في span.test-word عشان الـ blur يشتغل كلمة كلمة
 function wrapWordsForTestMode(bodyEl) {
   if (!bodyEl) return;
+  if (bodyEl.querySelector('.test-word')) return;
   const walker = document.createTreeWalker(bodyEl, NodeFilter.SHOW_TEXT, null);
   const textNodes = [];
   while (walker.nextNode()) textNodes.push(walker.currentNode);
@@ -253,11 +254,13 @@ function setupAudioBar(widget, playlist, initialRepeatCount = 1, reciterId = 'Hu
   };
 
   QuranAudioPlayer.onAyahChange = (surah, ayah, isLocal) => {
-    widget.querySelectorAll('.quran-ayah-unit').forEach(el => el.classList.remove('active-reciting'));
+    widget.querySelectorAll('.quran-ayah-unit, .mushaf-word, .mushaf-ayah-badge').forEach(el => el.classList.remove('active-reciting'));
     if (surah && ayah) {
-      const activeEl = widget.querySelector(`.quran-ayah-unit[data-surah="${surah}"][data-ayah="${ayah}"]`);
+      widget.querySelectorAll(`[data-surah="${surah}"][data-ayah="${ayah}"]`).forEach(el => {
+        el.classList.add('active-reciting');
+      });
+      const activeEl = widget.querySelector(`[data-surah="${surah}"][data-ayah="${ayah}"]`);
       if (activeEl) {
-        activeEl.classList.add('active-reciting');
         activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
@@ -350,6 +353,143 @@ async function getPageAyahsFromBG(pageNumber) {
 
 async function getMultiplePagesFromBG(pageNumbers) {
   return window.api.invoke('q:bg:message', { type: 'getMultiplePages', pages: pageNumbers });
+}
+
+let _mushafLayoutCache = null;
+async function getMushafPageData(pageNum) {
+  if (_mushafLayoutCache && _mushafLayoutCache[pageNum]) {
+    return _mushafLayoutCache[pageNum];
+  }
+  try {
+    const resp = await fetch('mushaf_layout.json');
+    _mushafLayoutCache = await resp.json();
+    return _mushafLayoutCache ? _mushafLayoutCache[pageNum] : null;
+  } catch (e) {
+    console.warn('Failed to load mushaf_layout.json via fetch:', e);
+    return null;
+  }
+}
+
+function buildMushafPageHtml(pageNum, pageData, layoutData, options = {}) {
+  const lines = (layoutData && layoutData.lines) || (pageData && pageData.lines);
+  if (!lines || lines.length === 0) {
+    return pageData.ayahTextHtml || '';
+  }
+
+  const surahTitle = (layoutData && layoutData.surah_title) || (pageData && pageData.surah_title) || (pageData && pageData.surahTitle) || '';
+  const juzNum = (layoutData && layoutData.juz) || (pageData && pageData.juz) || 1;
+  const level = options.level || 0;
+  const activeAyahs = options.activeAyahList;
+
+  let wordCounter = 0;
+
+  const linesHtml = lines.map(line => {
+    if (line.type === 'surah-header') {
+      const vCount = line.verses_count ? toArabicNumerals(line.verses_count) : '';
+      const place = line.place || '';
+      return `
+        <div class="mushaf-surah-header-plate">
+          <div class="mushaf-plate-side">${vCount ? `آيَاتُهَا ${vCount}` : ''}</div>
+          <div class="mushaf-plate-title">${line.name}</div>
+          <div class="mushaf-plate-side">${place}</div>
+        </div>
+      `;
+    }
+    if (line.type === 'basmala') {
+      return `
+        <div class="mushaf-basmala-line">
+          <span>بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</span>
+        </div>
+      `;
+    }
+
+    const isCenter = line.is_center ? ' line-center' : '';
+    const wordsHtml = (line.words || []).map(w => {
+      const s = w.s;
+      const a = w.a;
+      const text = w.w;
+      const ayahEnd = w.ayah_end;
+
+      const isDimmed = (activeAyahs && activeAyahs.length > 0 && !activeAyahs.some(x => x.surah === s && x.ayah === a));
+      const dimClass = isDimmed ? ' dimmed-chunk' : '';
+
+      let maskClass = '';
+      let isKeys = false;
+      if (!isDimmed) {
+        if (level === 1 && wordCounter % 4 === 2) {
+          maskClass = ' masked-word';
+        } else if (level === 2 && wordCounter % 2 === 1) {
+          maskClass = ' masked-word';
+        } else if (level === 3) {
+          isKeys = true;
+        } else if (level === 4) {
+          maskClass = ' masked-word';
+        }
+      }
+
+      let wordContent = text;
+      if (isKeys && !isDimmed) {
+        const { head, tail, raw } = splitArabicWordHeadTail(text);
+        wordContent = `
+          <span class="keys-masked-view">
+            <span class="head-text">${head}</span>
+            ${tail ? `<span class="tail-text">${tail}</span>` : ''}
+          </span>
+          <span class="keys-full-view">${raw || text}</span>
+        `;
+      }
+
+      wordCounter++;
+
+      const wordSpan = `<span class="mushaf-word test-word${maskClass}${isKeys ? ' keys-mode' : ''}${dimClass}" data-surah="${s}" data-ayah="${a}" data-idx="${wordCounter}">${wordContent}</span>`;
+      
+      let badgeSpan = '';
+      if (ayahEnd) {
+        badgeSpan = ` <span class="mushaf-ayah-badge${dimClass}" data-surah="${s}" data-ayah="${a}" title="آية ${toArabicNumerals(ayahEnd)}">﴿${toArabicNumerals(ayahEnd)}﴾</span>`;
+      }
+
+      return wordSpan + badgeSpan;
+    }).join(' ');
+
+    return `<div class="mushaf-line${isCenter}" data-line="${line.line}">${wordsHtml}</div>`;
+  }).join('\n');
+
+  return `
+    <div class="mushaf-page-wrapper" data-page="${pageNum}">
+      <div class="mushaf-page-top-meta">
+        <span class="mushaf-meta-surah">${surahTitle}</span>
+        <span class="mushaf-meta-juz">الجزء ${toArabicNumerals(juzNum)}</span>
+      </div>
+      <div class="mushaf-frame-outer">
+        <div class="mushaf-frame-inner">
+          <div class="mushaf-lines-container">
+            ${linesHtml}
+          </div>
+        </div>
+      </div>
+      <div class="mushaf-page-bottom-meta">
+        <span class="mushaf-page-num-tag">— ${toArabicNumerals(pageNum)} —</span>
+      </div>
+    </div>
+  `;
+}
+
+function setupMushafInteractions(containerEl) {
+  if (!containerEl) return;
+
+  containerEl.querySelectorAll('.mushaf-word, .mushaf-ayah-badge').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const surah = parseInt(el.dataset.surah, 10);
+      const ayah = parseInt(el.dataset.ayah, 10);
+      if (el.classList.contains('masked-word') || el.classList.contains('keys-mode')) {
+        el.classList.toggle('revealed');
+      }
+      if (surah && ayah) {
+        QuranAudioPlayer.playSingleAyah(surah, ayah);
+      }
+    });
+  });
 }
 
 async function getEffectiveHideHeader(fallback = false) {
@@ -539,17 +679,22 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   `;
 
   const allReviewAyahs = [];
-  const bodyHtml = sessionPages.map((sp, idx) => {
+  const bodyHtmlPromises = sessionPages.map(async (sp, idx) => {
+    const ayahs = sp.pageData.ayahDetails || [];
+    ayahs.forEach(a => allReviewAyahs.push(a));
+    const layout = (sp.pageData && sp.pageData.lines) ? sp.pageData : await getMushafPageData(sp.pageNum);
+    if (layout && layout.lines) {
+      return buildMushafPageHtml(sp.pageNum, sp.pageData, layout);
+    }
     const sep = idx > 0
       ? `<div class="quran-widget-page-divider">— صفحة ${toArabicNumerals(sp.pageNum)} —</div>`
       : '';
-    const ayahs = sp.pageData.ayahDetails || [];
-    ayahs.forEach(a => allReviewAyahs.push(a));
     const pageAyahsHtml = ayahs.length > 0
       ? ayahs.map(a => `<span class="quran-ayah-unit" data-surah="${a.surah}" data-ayah="${a.ayah}" title="آية ${toArabicNumerals(a.ayah)} — انقر للاستماع">${a.text}</span>`).join(' ')
       : sp.pageData.ayahTextHtml;
     return sep + pageAyahsHtml;
-  }).join('');
+  });
+  const bodyHtml = (await Promise.all(bodyHtmlPromises)).join('');
 
   const nextHtml = nextPagePreview ? `
     <div class="quran-widget-next-ayah">
@@ -596,6 +741,7 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
 
   // لف الكلمات في span عشان الـ blur
   if (_recentBody) wrapWordsForTestMode(_recentBody);
+  setupMushafInteractions(widget);
 
   // ربط النقر على الآيات لتشغيلها
   widget.querySelectorAll('.quran-ayah-unit').forEach(el => {
@@ -806,17 +952,22 @@ async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetS
   `;
 
   const allPrepAyahs = [];
-  const bodyHtml = sessionPages.map((sp, idx) => {
+  const bodyHtmlPromises = sessionPages.map(async (sp, idx) => {
+    const ayahs = sp.pageData.ayahDetails || [];
+    ayahs.forEach(a => allPrepAyahs.push(a));
+    const layout = (sp.pageData && sp.pageData.lines) ? sp.pageData : await getMushafPageData(sp.pageNum);
+    if (layout && layout.lines) {
+      return buildMushafPageHtml(sp.pageNum, sp.pageData, layout);
+    }
     const sep = idx > 0
       ? `<div class="quran-widget-page-divider">— صفحة ${toArabicNumerals(sp.pageNum)} —</div>`
       : '';
-    const ayahs = sp.pageData.ayahDetails || [];
-    ayahs.forEach(a => allPrepAyahs.push(a));
     const pageAyahsHtml = ayahs.length > 0
       ? ayahs.map(a => `<span class="quran-ayah-unit" data-surah="${a.surah}" data-ayah="${a.ayah}" title="آية ${toArabicNumerals(a.ayah)} — انقر للاستماع">${a.text}</span>`).join(' ')
       : sp.pageData.ayahTextHtml;
     return sep + pageAyahsHtml;
-  }).join('');
+  });
+  const bodyHtml = (await Promise.all(bodyHtmlPromises)).join('');
 
   const nextHtml = nextPagePreview ? `
     <div class="quran-widget-next-ayah">
@@ -861,6 +1012,7 @@ async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetS
   document.body.appendChild(widget);
 
   if (_prepBody) wrapWordsForTestMode(_prepBody);
+  setupMushafInteractions(widget);
 
   // ربط النقر على الآيات لتشغيلها بنقرة واحدة
   widget.querySelectorAll('.quran-ayah-unit').forEach(el => {
@@ -1220,17 +1372,22 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
 
   // بناء محتوى كل الصفحات في الجلسة
   const allReviewAyahs = [];
-  const bodyHtml = sessionPages.map((sp, idx) => {
+  const bodyHtmlPromises = sessionPages.map(async (sp, idx) => {
+    const ayahs = sp.pageData.ayahDetails || [];
+    ayahs.forEach(a => allReviewAyahs.push(a));
+    const layout = (sp.pageData && sp.pageData.lines) ? sp.pageData : await getMushafPageData(sp.pageNum);
+    if (layout && layout.lines) {
+      return buildMushafPageHtml(sp.pageNum, sp.pageData, layout);
+    }
     const sep = idx > 0
       ? `<div class="quran-widget-page-divider">— صفحة ${toArabicNumerals(sp.pageNum)} —</div>`
       : '';
-    const ayahs = sp.pageData.ayahDetails || [];
-    ayahs.forEach(a => allReviewAyahs.push(a));
     const pageAyahsHtml = ayahs.length > 0
       ? ayahs.map(a => `<span class="quran-ayah-unit" data-surah="${a.surah}" data-ayah="${a.ayah}" title="آية ${toArabicNumerals(a.ayah)} — انقر للاستماع">${a.text}</span>`).join(' ')
       : sp.pageData.ayahTextHtml;
     return sep + pageAyahsHtml;
-  }).join('');
+  });
+  const bodyHtml = (await Promise.all(bodyHtmlPromises)).join('');
 
   const nextHtml = nextPagePreview ? `
     <div class="quran-widget-next-ayah">
@@ -1280,6 +1437,7 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
 
   // لف الكلمات في span عشان الـ blur
   if (_reviewBody) wrapWordsForTestMode(_reviewBody);
+  setupMushafInteractions(widget);
 
   // ربط النقر على الآيات لتشغيلها
   widget.querySelectorAll('.quran-ayah-unit').forEach(el => {
@@ -1805,7 +1963,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
 
   const ayahContainerEl = widget.querySelector('#quran-ayah-container');
 
-  function updateProgressiveUI() {
+  async function updateProgressiveUI() {
     widget.querySelectorAll('#quran-prog-levels .quran-prog-pill').forEach(p => {
       p.classList.toggle('active', parseInt(p.dataset.lvl, 10) === currentLevel);
     });
@@ -1821,7 +1979,16 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
 
     if (ayahContainerEl) {
       ayahContainerEl.className = 'quran-ayah-content test-level-' + activeLvl;
-      renderAyahTextWithMasks(ayahContainerEl, activeText, activeLvl, activeAyahList);
+      const mushafData = (pageData && pageData.lines) ? pageData : await getMushafPageData(pageNumber);
+      if (mushafData && mushafData.lines) {
+        ayahContainerEl.innerHTML = buildMushafPageHtml(pageNumber, pageData, mushafData, {
+          level: activeLvl,
+          activeAyahList: (isProgActive && safeChunkIdx > 0) ? activeAyahList : null
+        });
+        setupMushafInteractions(ayahContainerEl);
+      } else {
+        renderAyahTextWithMasks(ayahContainerEl, activeText, activeLvl, activeAyahList);
+      }
     }
     QuranAudioPlayer.setPlaylist(activeAyahList, repeatCount, reciterId);
 
@@ -1855,7 +2022,7 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
     updateProgressiveUI();
   };
 
-  updateProgressiveUI();
+  await updateProgressiveUI();
 
   document.body.appendChild(widget);
 
