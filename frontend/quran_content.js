@@ -780,7 +780,9 @@ async function injectRecentReviewWidget(sessionPages, recentData, nextPagePrevie
   `;
 
   const _recentBody = widget.querySelector('.quran-widget-body');
-  if (_recentBody) _recentBody.style.fontSize = fontData.fontSizePx + 'px';
+  const fsPx = (fontData.fontSizePx || 26) + 'px';
+  widget.style.setProperty('--quran-font-size', fsPx);
+  if (_recentBody) _recentBody.style.fontSize = fsPx;
 
   // تطبيق وضع الاختبار لو مفعّل
   if (testModeOn) widget.classList.add('quran-widget-test-active');
@@ -1053,7 +1055,9 @@ async function injectPrepWidget(sessionPages, prepData, nextPagePreview, widgetS
   `;
 
   const _prepBody = widget.querySelector('.quran-widget-body');
-  if (_prepBody) _prepBody.style.fontSize = fontData.fontSizePx + 'px';
+  const fsPx = (fontData.fontSizePx || 26) + 'px';
+  widget.style.setProperty('--quran-font-size', fsPx);
+  if (_prepBody) _prepBody.style.fontSize = fsPx;
 
   if (testModeOn) widget.classList.add('quran-widget-test-active');
 
@@ -1476,7 +1480,9 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
 
   // طبّق الخط قبل الإضافة للـ DOM
   const _reviewBody = widget.querySelector('.quran-widget-body');
-  if (_reviewBody) _reviewBody.style.fontSize = _reviewFontData.fontSizePx + 'px';
+  const fsPx = (_reviewFontData.fontSizePx || 26) + 'px';
+  widget.style.setProperty('--quran-font-size', fsPx);
+  if (_reviewBody) _reviewBody.style.fontSize = fsPx;
 
   // تطبيق وضع الاختبار لو مفعّل
   if (testModeOn) widget.classList.add('quran-widget-test-active');
@@ -1969,7 +1975,8 @@ async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, page
   `;
 
   // طبّق الخط قبل الإضافة للـ DOM
-  const fsPx = config.fontSizePx + 'px';
+  const fsPx = (config.fontSizePx || 26) + 'px';
+  widget.style.setProperty('--quran-font-size', fsPx);
   const bodyEl = widget.querySelector('.quran-widget-body');
   if (bodyEl) bodyEl.style.fontSize = fsPx;
   const nextEl = widget.querySelector('.quran-widget-next-ayah-text');
@@ -2273,6 +2280,20 @@ window.api.receive('q:store:changed', (changes) => {
       const widget = document.getElementById('quran-memorization-widget');
       if (widget && typeof widget._setProgressiveChunk === 'function') {
         widget._setProgressiveChunk(parseInt(val, 10) || 0);
+      }
+    }
+
+    if (changes.fontSizePx !== undefined) {
+      const raw = changes.fontSizePx;
+      const val = (raw && typeof raw === 'object' && raw.newValue !== undefined) ? raw.newValue : raw;
+      const fsPx = (parseInt(val, 10) || 26) + 'px';
+      const widget = document.getElementById('quran-memorization-widget');
+      if (widget) {
+        widget.style.setProperty('--quran-font-size', fsPx);
+        const bodyEl = widget.querySelector('.quran-widget-body');
+        if (bodyEl) bodyEl.style.fontSize = fsPx;
+        const nextEl = widget.querySelector('.quran-widget-next-ayah-text');
+        if (nextEl) nextEl.style.fontSize = fsPx;
       }
     }
   } catch (e) {

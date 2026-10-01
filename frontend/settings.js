@@ -145,6 +145,14 @@ gid('slFont').addEventListener('input', () => {
 gid('quranFontSize').addEventListener('input', () => {
   gid('quranLblFont').textContent = gid('quranFontSize').value;
 });
+gid('quranFontSize')?.addEventListener('change', async () => {
+  const val = parseInt(gid('quranFontSize').value, 10) || 26;
+  try {
+    await window.api.invoke('q:store:set', { fontSizePx: val });
+  } catch (e) {
+    console.warn('Failed to auto-save quran fontSizePx', e);
+  }
+});
 
 gid('chkDark').addEventListener('change', () => {
   document.body.classList.toggle('dark', gid('chkDark').checked);

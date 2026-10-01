@@ -411,7 +411,7 @@
 .quran-widget-body {
   padding: 14px 16px 10px;
   overflow-y: auto;
-  font-size: 26px;
+  font-size: var(--quran-font-size, 26px);
   line-height: 2.3;
   text-align: justify;
   text-align-last: center;
@@ -1214,10 +1214,10 @@
   justify-content: space-between;
   align-items: baseline;
   width: 100%;
-  min-height: 28px;
+  min-height: 1.45em;
   line-height: 1.62;
   font-family: 'QuranFont', 'Amiri', serif;
-  font-size: 20px;
+  font-size: var(--quran-font-size, 20px);
   box-sizing: border-box;
 }
 
@@ -1346,7 +1346,7 @@
   width: 100%;
   margin: 3px 0 5px;
   font-family: 'QuranFont', 'Amiri', serif;
-  font-size: 20px;
+  font-size: var(--quran-font-size, 20px);
   color: #1a1a1a;
   letter-spacing: 0.5px;
 }
