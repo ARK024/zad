@@ -1,8 +1,16 @@
 
 
-function abortAndHide() {
+function abortAndHide(err) {
+  if (err) {
+    console.error('Quran widget error / abortAndHide:', err);
+  }
   const loader = document.getElementById('__loading');
-  if (loader) loader.remove();
+  if (loader && err) {
+    loader.textContent = 'خطأ: ' + (err.message || String(err));
+    loader.style.color = '#b00';
+  } else if (loader) {
+    loader.remove();
+  }
   if (window.api && window.api.invoke) {
     window.api.invoke('q:window:hide').catch(() => {});
   }
@@ -12,6 +20,40 @@ function toArabicNumerals(num) {
   if (num === undefined || num === null || isNaN(num)) return '';
   const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   return num.toString().split('').map(digit => arabicNumbers[digit] ?? digit).join('');
+}
+
+function isAyahNumberOrSymbol(word) {
+  return /^[\s\uFC00-\uFD3D\uFD3E\uFD3F\u06D6-\u06ED0-9\u0660-\u0669\(\)﴿﴾]+$/u.test(word);
+}
+
+const NON_CONNECTING_ARABIC = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'د', 'ذ', 'ر', 'ز', 'و', 'ؤ', 'ة', 'ء', 'ى']);
+
+function splitArabicWordHeadTail(word) {
+  if (isAyahNumberOrSymbol(word)) return { head: word, tail: '', connects: false, raw: word };
+  const diacriticsRegex = /[\u064B-\u065F\u0670\u06D6-\u06ED]/;
+  let head = '';
+  let baseChar = '';
+  let i = 0;
+  while (i < word.length && !word[i].match(/\p{L}/u)) {
+    head += word[i];
+    i++;
+  }
+  if (i < word.length) {
+    baseChar = word[i];
+    head += word[i];
+    i++;
+  }
+  while (i < word.length && diacriticsRegex.test(word[i])) {
+    head += word[i];
+    i++;
+  }
+  const rawTail = word.slice(i);
+  if (!rawTail) return { head: head || word, tail: '', connects: false, raw: word };
+
+  const connects = !NON_CONNECTING_ARABIC.has(baseChar);
+  const headWithZwj = connects ? (head + '\u200D') : head;
+  const tailWithZwj = connects ? ('\u200D' + rawTail) : rawTail;
+  return { head: headWithZwj, tail: tailWithZwj, connects, raw: word };
 }
 
 
@@ -357,13 +399,18 @@ async function getMultiplePagesFromBG(pageNumbers) {
 
 let _mushafLayoutCache = null;
 async function getMushafPageData(pageNum) {
-  if (_mushafLayoutCache && _mushafLayoutCache[pageNum]) {
-    return _mushafLayoutCache[pageNum];
+  const key = String(pageNum);
+  if (_mushafLayoutCache && (_mushafLayoutCache[key] || _mushafLayoutCache[pageNum])) {
+    return _mushafLayoutCache[key] || _mushafLayoutCache[pageNum];
   }
   try {
     const resp = await fetch('mushaf_layout.json');
+    if (!resp.ok) {
+      console.warn('mushaf_layout.json fetch HTTP status:', resp.status);
+      return null;
+    }
     _mushafLayoutCache = await resp.json();
-    return _mushafLayoutCache ? _mushafLayoutCache[pageNum] : null;
+    return _mushafLayoutCache ? (_mushafLayoutCache[key] || _mushafLayoutCache[pageNum]) : null;
   } catch (e) {
     console.warn('Failed to load mushaf_layout.json via fetch:', e);
     return null;
@@ -373,10 +420,11 @@ async function getMushafPageData(pageNum) {
 function buildMushafPageHtml(pageNum, pageData, layoutData, options = {}) {
   const lines = (layoutData && layoutData.lines) || (pageData && pageData.lines);
   if (!lines || lines.length === 0) {
-    return pageData.ayahTextHtml || '';
+    return (pageData && pageData.ayahTextHtml) || '';
   }
 
-  const surahTitle = (layoutData && layoutData.surah_title) || (pageData && pageData.surah_title) || (pageData && pageData.surahTitle) || '';
+  const surahTitle = (layoutData && (layoutData.surah_title || layoutData.surahTitle)) ||
+                     (pageData && (pageData.surah_title || pageData.surahTitle)) || '';
   const juzNum = (layoutData && layoutData.juz) || (pageData && pageData.juz) || 1;
   const level = options.level || 0;
   const activeAyahs = options.activeAyahList;
@@ -1149,7 +1197,7 @@ async function initQuranWidget() {
 
     try {
       await StorageManager.initData();
-    } catch (e) { return abortAndHide(); }
+    } catch (e) { return abortAndHide(e); }
 
     let data;
     try {
@@ -1164,7 +1212,7 @@ async function initQuranWidget() {
         prepModeEnabled: false,
         pausedUntil: 0
       });
-    } catch (e) { return abortAndHide(); }
+    } catch (e) { return abortAndHide(e); }
 
     const widgetSize = data.widgetSize || 'medium';
     const hideHeader = await getEffectiveHideHeader(data.hideHeader);
@@ -1204,7 +1252,7 @@ async function initQuranWidget() {
 
     await showNewMemorizationPage(data.currentQuranPage, widgetSize, hideHeader);
 
-  } catch (error) { abortAndHide(); }
+  } catch (error) { abortAndHide(error); }
 }
 
 async function showReviewPage(reviewData, widgetSize, hideHeader, _attempts = 0) {
@@ -1280,7 +1328,7 @@ async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
   const pageData = await getPageAyahsFromBG(currentPage);
   if (!pageData) {
     console.error('No Ayahs found for page', currentPage);
-    abortAndHide();
+    abortAndHide(new Error('No Ayahs found for page ' + currentPage));
     return;
   }
 
@@ -1297,7 +1345,7 @@ async function showNewMemorizationPage(currentPage, widgetSize, hideHeader) {
     };
   }
 
-  await injectWidget(pageData.surahTitle, currentPage, pageData.ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize, resolvedHide, pageData.ayahs, pageData.ayahDetails);
+  await injectWidget(pageData.surahTitle, currentPage, pageData.ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize, resolvedHide, pageData.ayahs, pageData.ayahDetails, pageData);
 }
 
 async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, widgetSize = 'medium', hideHeader = false) {
@@ -1525,40 +1573,6 @@ async function injectReviewWidget(sessionPages, reviewData, nextPagePreview, wid
       }, 300);
     }, 1000);
   });
-}
-
-function isAyahNumberOrSymbol(word) {
-  return /^[\s\uFC00-\uFD3D\uFD3E\uFD3F\u06D6-\u06ED0-9\u0660-\u0669\(\)﴿﴾]+$/u.test(word);
-}
-
-const NON_CONNECTING_ARABIC = new Set(['ا', 'أ', 'إ', 'آ', 'ٱ', 'د', 'ذ', 'ر', 'ز', 'و', 'ؤ', 'ة', 'ء', 'ى']);
-
-function splitArabicWordHeadTail(word) {
-  if (isAyahNumberOrSymbol(word)) return { head: word, tail: '', connects: false, raw: word };
-  const diacriticsRegex = /[\u064B-\u065F\u0670\u06D6-\u06ED]/;
-  let head = '';
-  let baseChar = '';
-  let i = 0;
-  while (i < word.length && !word[i].match(/\p{L}/u)) {
-    head += word[i];
-    i++;
-  }
-  if (i < word.length) {
-    baseChar = word[i];
-    head += word[i];
-    i++;
-  }
-  while (i < word.length && diacriticsRegex.test(word[i])) {
-    head += word[i];
-    i++;
-  }
-  const rawTail = word.slice(i);
-  if (!rawTail) return { head: head || word, tail: '', connects: false, raw: word };
-
-  const connects = !NON_CONNECTING_ARABIC.has(baseChar);
-  const headWithZwj = connects ? (head + '\u200D') : head;
-  const tailWithZwj = connects ? ('\u200D' + rawTail) : rawTail;
-  return { head: headWithZwj, tail: tailWithZwj, connects, raw: word };
 }
 
 function createChunks(ayahs, fullText, ayahDetails = []) {
@@ -1809,7 +1823,7 @@ function renderAyahTextWithMasks(containerEl, text, level, activeAyahList = null
   containerEl.appendChild(frag);
 }
 
-async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize = 'medium', hideHeader = false, ayahs = [], ayahDetails = []) {
+async function injectWidget(surahTitle, pageNumber, ayahTextHtml, progress, pageStats, nextAyahPreview, widgetSize = 'medium', hideHeader = false, ayahs = [], ayahDetails = [], pageData = null) {
   const existingWidget = document.getElementById('quran-memorization-widget');
   if (existingWidget) existingWidget.remove();
 
